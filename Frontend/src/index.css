@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.18s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+@media (max-width: 1024px) {
+  .creators-dropdown {
+    width: 98vw !important;
+    min-width: unset !important;
+    padding: 1rem !important;
+  }
+}
