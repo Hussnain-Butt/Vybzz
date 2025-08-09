@@ -4,9 +4,10 @@ import Section from '../Shared/Section'
 
 const GetToKnow: React.FC = () => {
   return (
-    <Section id="features" className="bg-[#596FE3]">
+    // Replaced hardcoded background color with a root variable
+    <Section id="features" className="bg-[rgb(var(--color-background-blue))]">
       <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-        <div className="text-white">
+        <div className="text-[rgb(var(--color-text-primary))]">
           <h2 className="text-5xl md:text-7xl font-bold leading-tight">
             Get to know your listeners
           </h2>
@@ -17,10 +18,12 @@ const GetToKnow: React.FC = () => {
           </p>
         </div>
         <div className="relative h-[550px] w-full max-w-sm mx-auto">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-md rounded-3xl p-4 shadow-2xl border border-white/20 transform -rotate-3 transition-transform duration-500 hover:rotate-0">
+          <div className="absolute inset-0 bg-[rgb(var(--color-background-dark)/0.2)] backdrop-blur-md rounded-3xl p-4 shadow-2xl border border-[rgb(var(--color-text-primary)/0.2)] transform -rotate-3 transition-transform duration-500 hover:rotate-0">
             <div className="flex justify-between items-center mb-4 px-2">
-              <h3 className="font-bold text-lg text-white">Comments</h3>
-              <span className="text-white text-2xl font-thin">&times;</span>
+              <h3 className="font-bold text-lg text-[rgb(var(--color-text-primary))]">Comments</h3>
+              <span className="text-[rgb(var(--color-text-primary))] text-2xl font-thin">
+                &times;
+              </span>
             </div>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
@@ -29,17 +32,20 @@ const GetToKnow: React.FC = () => {
                   alt="Avatar Mia"
                   className="w-10 h-10 rounded-full"
                 />
-                <div className="bg-black/40 rounded-2xl p-3 text-white">
+                <div className="bg-[rgb(var(--color-background-dark)/0.4)] rounded-2xl p-3 text-[rgb(var(--color-text-primary))]">
                   <p className="font-semibold text-sm">Mia</p>
                   <p className="text-sm">Get ready for some cozy vibes! 🍂</p>
-                  <div className="flex items-center gap-3 text-xs mt-2 text-slate-400">❤️ 5</div>
+                  <div className="flex items-center gap-3 text-xs mt-2 text-[rgb(var(--color-text-secondary)/0.8)]">
+                    ❤️ 5
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-3 justify-end">
-                <div className="bg-[#E96424] rounded-2xl p-3 text-white">
+                {/* Replaced hardcoded orange with the accent color variable */}
+                <div className="bg-[rgb(var(--color-accent-orange))] rounded-2xl p-3 text-[rgb(var(--color-text-primary))]">
                   <p className="font-semibold text-sm">
                     Rachel Makey{' '}
-                    <span className="text-xs bg-black/20 px-1.5 py-0.5 rounded-full ml-1">
+                    <span className="text-xs bg-[rgb(var(--color-background-dark)/0.2)] px-1.5 py-0.5 rounded-full ml-1">
                       CREATOR
                     </span>
                   </p>
@@ -52,10 +58,12 @@ const GetToKnow: React.FC = () => {
                   alt="Avatar Loren"
                   className="w-10 h-10 rounded-full"
                 />
-                <div className="bg-black/40 rounded-2xl p-3 text-white">
+                <div className="bg-[rgb(var(--color-background-dark)/0.4)] rounded-2xl p-3 text-[rgb(var(--color-text-primary))]">
                   <p className="font-semibold text-sm">Loren</p>
                   <p className="text-sm">More seasonal themes, please! 😍</p>
-                  <div className="flex items-center gap-3 text-xs mt-2 text-slate-400">❤️ 5</div>
+                  <div className="flex items-center gap-3 text-xs mt-2 text-[rgb(var(--color-text-secondary)/0.8)]">
+                    ❤️ 5
+                  </div>
                 </div>
               </div>
             </div>

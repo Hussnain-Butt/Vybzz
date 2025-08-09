@@ -1,10 +1,9 @@
+// src/components/PodcastersPage/TestimonialQuote.tsx
 import React, { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
-
-const professionalFont = "'Inter', sans-serif"
 
 const TestimonialQuote: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null)
@@ -42,7 +41,7 @@ const TestimonialQuote: React.FC = () => {
         .split(' ')
         .map((word) => `<span class="inline-block opacity-0 translate-y-8">${word}</span>`)
         .join(' ')
-      const words = gsap.utils.toArray<HTMLElement>('.inline-block', quoteRef.current)
+      const words = Array.from(quoteRef.current.querySelectorAll('.inline-block')) as HTMLElement[]
 
       gsap.to(words, {
         opacity: 1,
@@ -85,8 +84,7 @@ const TestimonialQuote: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative py-32 sm:py-40 bg-slate-900 overflow-hidden"
-      style={{ fontFamily: professionalFont }}
+      className="relative py-32 sm:py-40 bg-[rgb(var(--color-surface-1))] overflow-hidden"
     >
       {/* Background Image */}
       <img
@@ -96,14 +94,14 @@ const TestimonialQuote: React.FC = () => {
         className="absolute inset-0 w-full h-full object-cover opacity-20"
       />
 
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
+      {/* Dark Overlay using Theme Colors */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[rgb(var(--color-background-dark))] via-[rgb(var(--color-background-dark)/0.7)] to-transparent"></div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 lg:px-8 text-center">
         {/* Decorative Quotation Mark */}
         <span
           ref={quoteMarkRef}
-          className="absolute -top-16 left-1/2 -translate-x-1/2 text-9xl text-cyan-400/10 font-serif opacity-0"
+          className="absolute -top-16 left-1/2 -translate-x-1/2 text-9xl text-[rgb(var(--color-text-link)/0.1)] font-serif opacity-0"
         >
           “
         </span>
@@ -111,22 +109,22 @@ const TestimonialQuote: React.FC = () => {
         {/* The Quote */}
         <p
           ref={quoteRef}
-          className="text-3xl sm:text-4xl lg:text-5xl font-light text-white leading-tight sm:leading-snug mb-16"
+          className="text-3xl sm:text-4xl lg:text-5xl font-light text-[rgb(var(--color-text-primary))] leading-tight sm:leading-snug mb-16"
         >
           {/* Text will be populated by JavaScript */}
         </p>
 
         {/* Author Card */}
         <div ref={authorRef} className="inline-block opacity-0">
-          <div className="flex items-center gap-4 bg-slate-800/40 backdrop-blur-md p-4 pr-6 rounded-full border border-slate-700/50">
+          <div className="flex items-center gap-4 bg-[rgb(var(--color-surface-2)/0.4)] backdrop-blur-md p-4 pr-6 rounded-full border border-[rgb(var(--color-surface-3)/0.5)]">
             <img
               src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop"
               alt="KAMAUU"
-              className="w-16 h-16 rounded-full object-cover border-2 border-cyan-400"
+              className="w-16 h-16 rounded-full object-cover border-2 border-[rgb(var(--color-text-link))]"
             />
             <div className="text-left">
-              <h3 className="text-xl font-bold text-white">KAMAUU</h3>
-              <p className="text-md text-cyan-300">Musician & Artist</p>
+              <h3 className="text-xl font-bold text-[rgb(var(--color-text-primary))]">KAMAUU</h3>
+              <p className="text-md text-[rgb(var(--color-text-link)/0.9)]">Musician & Artist</p>
             </div>
           </div>
         </div>

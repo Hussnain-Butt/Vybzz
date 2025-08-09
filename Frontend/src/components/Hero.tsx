@@ -1,3 +1,4 @@
+// src/components/Hero.tsx
 import React, { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { Play, Star, ArrowRight } from 'lucide-react'
@@ -9,13 +10,14 @@ import 'swiper/css'
 import 'swiper/css/effect-creative'
 import 'swiper/css/effect-fade'
 
-// --- Components & Data (No Changes) ---
+// --- Reusable Button component ---
 const Button: React.FC<any> = ({ children, className, ...props }) => (
   <button className={className} {...props}>
     {children}
   </button>
 )
 
+// --- Static Data ---
 const backgroundImages = [
   'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=compress&cs=tinysrgb&w=1920&h=1080&q=80',
   'https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=compress&cs=tinysrgb&w=1920&h=1080&q=80',
@@ -47,7 +49,7 @@ const creatorCardsData = [
   },
 ]
 
-// --- FULLY RESPONSIVE HERO COMPONENT ---
+// --- Fully Responsive Hero Component ---
 const Hero: React.FC = () => {
   const heroContentRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -58,7 +60,7 @@ const Hero: React.FC = () => {
   const swiperContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // GSAP animations remain the same as they target elements that are now responsive
+    // GSAP animations
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
     tl.fromTo(titleRef.current, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 1 })
       .fromTo(
@@ -81,17 +83,15 @@ const Hero: React.FC = () => {
         '-=1',
       )
 
-    // Mouse parallax effect should only run on larger screens
+    // Mouse parallax effect
     const mm = gsap.matchMedia()
     mm.add('(min-width: 1024px)', () => {
       const handleMouseMove = (e: MouseEvent) => {
         if (!heroContentRef.current) return
         const { clientX, clientY } = e
         const { offsetWidth, offsetHeight } = heroContentRef.current
-
         const xPercent = clientX / offsetWidth - 0.5
         const yPercent = clientY / offsetHeight - 0.5
-
         gsap.to(creatorCardSliderRef.current, {
           x: -xPercent * 50,
           y: -yPercent * 50,
@@ -113,8 +113,9 @@ const Hero: React.FC = () => {
   }, [])
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-black py-20 sm:py-0">
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-[rgb(var(--color-background-dark))] py-20 sm:py-0">
       <style>{`
+        /* Swiper transition styles remain unchanged */
         .swiper-vertical-transition .swiper-slide-next { transform: translateY(100%) !important; }
         .swiper-vertical-transition .swiper-slide-prev { transform: translateY(-100%) !important; }
         .swiper-creative .swiper-slide { transition-property: transform, opacity; }
@@ -132,10 +133,6 @@ const Hero: React.FC = () => {
             prev: { shadow: true, translate: ['-100%', 0, -500] },
             next: { shadow: true, translate: ['100%', 0, -500] },
           }}
-          onSlideChange={(swiper) => {
-            if (swiper.el)
-              swiper.el.classList.toggle('swiper-vertical-transition', Math.random() > 0.5)
-          }}
           className="w-full h-full"
         >
           {backgroundImages.map((img, index) => (
@@ -147,10 +144,11 @@ const Hero: React.FC = () => {
             </SwiperSlide>
           ))}
         </Swiper>
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40 z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgb(var(--color-background-dark))] via-[rgb(var(--color-background-dark)/0.8)] to-[rgb(var(--color-background-dark)/0.4)] z-10"></div>
       </div>
-      <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-600/20 rounded-full mix-blend-lighten filter blur-3xl opacity-70 z-20"></div>
-      <div className="absolute -top-20 -left-20 w-96 h-96 bg-cyan-600/20 rounded-full mix-blend-lighten filter blur-3xl opacity-70 z-20"></div>
+      {/* Background Glows using Theme Colors */}
+      <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-[rgb(var(--color-primary-blue)/0.2)] rounded-full mix-blend-lighten filter blur-3xl opacity-70 z-20"></div>
+      <div className="absolute -top-20 -left-20 w-96 h-96 bg-[rgb(var(--color-primary-cyan)/0.2)] rounded-full mix-blend-lighten filter blur-3xl opacity-70 z-20"></div>
 
       {/* Responsive Content Layer */}
       <div
@@ -158,17 +156,17 @@ const Hero: React.FC = () => {
         className="relative z-30 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8"
       >
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          {/* Left Content - Responsive text and alignment */}
+          {/* Left Content */}
           <div className="text-center lg:text-left">
             <h1
               ref={titleRef}
-              className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold text-white leading-tight mb-6"
+              className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold text-[rgb(var(--color-text-primary))] leading-tight mb-6"
             >
               Sing Your Song.
             </h1>
             <p
               ref={subtitleRef}
-              className="text-lg sm:text-xl text-slate-300 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed"
+              className="text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed"
             >
               From music to podcasts, share your sound with the world and get paid for your passion.
             </p>
@@ -176,29 +174,29 @@ const Hero: React.FC = () => {
               ref={buttonsRef}
               className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-10"
             >
-              <Button className="group w-full sm:w-auto flex items-center justify-center bg-gradient-to-r from-cyan-400 to-blue-500 text-white px-7 py-3 text-lg font-semibold rounded-full shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-cyan-500/40 transition-all duration-300 transform hover:scale-105">
+              <Button className="group w-full sm:w-auto flex items-center justify-center bg-gradient-to-r from-[rgb(var(--color-primary-cyan))] to-[rgb(var(--color-primary-blue))] text-white px-7 py-3 text-lg font-semibold rounded-full shadow-lg shadow-[rgb(var(--color-primary-blue)/0.3)] hover:shadow-xl hover:shadow-[rgb(var(--color-primary-cyan)/0.4)] transition-all duration-300 transform hover:scale-105">
                 Start creating{' '}
                 <ArrowRight className="ml-2 w-5 h-5 transform group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button className="group w-full sm:w-auto flex items-center justify-center border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 hover:bg-white/5 backdrop-blur-sm px-7 py-3 text-lg font-semibold rounded-full transition-all duration-300">
-                <Play className="mr-2 w-5 h-5 fill-slate-300 group-hover:fill-white transition-colors" />{' '}
+              <Button className="group w-full sm:w-auto flex items-center justify-center border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-secondary))] hover:text-[rgb(var(--color-text-primary))] hover:border-[rgb(var(--color-surface-3)/0.8)] hover:bg-[rgb(var(--color-text-primary)/0.05)] backdrop-blur-sm px-7 py-3 text-lg font-semibold rounded-full transition-all duration-300">
+                <Play className="mr-2 w-5 h-5 fill-[rgb(var(--color-text-secondary))] group-hover:fill-[rgb(var(--color-text-primary))] transition-colors" />{' '}
                 Watch demo
               </Button>
             </div>
             <div
               ref={statsRef}
-              className="flex items-center justify-center lg:justify-start gap-4 sm:gap-6 text-slate-400"
+              className="flex items-center justify-center lg:justify-start gap-4 sm:gap-6 text-[rgb(var(--color-text-secondary)/0.9)]"
             >
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-400 fill-current" />{' '}
                 <span className="text-xs sm:text-sm font-medium">4.9/5 rating</span>
               </div>
               <div className="text-xs sm:text-sm">
-                <span className="font-bold text-white">200K+</span>{' '}
+                <span className="font-bold text-[rgb(var(--color-text-primary))]">200K+</span>{' '}
                 <span className="ml-1.5">creators</span>
               </div>
               <div className="text-xs sm:text-sm">
-                <span className="font-bold text-white">$2B+</span>{' '}
+                <span className="font-bold text-[rgb(var(--color-text-primary))]">$2B+</span>{' '}
                 <span className="ml-1.5">paid out</span>
               </div>
             </div>
@@ -220,9 +218,9 @@ const Hero: React.FC = () => {
             >
               {creatorCardsData.map((card, index) => (
                 <SwiperSlide key={index}>
-                  <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-6 shadow-2xl shadow-black/40 border border-slate-700 w-full">
+                  <div className="bg-[rgb(var(--color-surface-1)/0.4)] backdrop-blur-xl rounded-3xl p-6 shadow-2xl shadow-[rgb(var(--color-background-dark)/0.4)] border border-[rgb(var(--color-surface-3))] w-full">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-600 flex-shrink-0">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[rgb(var(--color-surface-3))] flex-shrink-0">
                         <img
                           src={card.image}
                           alt={card.name}
@@ -230,25 +228,31 @@ const Hero: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <h3 className="text-white font-semibold text-lg">{card.name}</h3>
-                        <p className="text-slate-400 text-sm">{card.bio}</p>
+                        <h3 className="text-[rgb(var(--color-text-primary))] font-semibold text-lg">
+                          {card.name}
+                        </h3>
+                        <p className="text-[rgb(var(--color-text-secondary)/0.9)] text-sm">
+                          {card.bio}
+                        </p>
                       </div>
                     </div>
                     <div className="space-y-3.5">
-                      <div className="bg-slate-800/60 rounded-xl p-4">
+                      <div className="bg-[rgb(var(--color-surface-2)/0.6)] rounded-xl p-4">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-slate-300 font-medium">Monthly earnings</span>
+                          <span className="text-[rgb(var(--color-text-secondary))] font-medium">
+                            Monthly earnings
+                          </span>
                           <span className="text-green-400 font-bold">{card.earnings}</span>
                         </div>
-                        <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
-                          <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 w-3/4"></div>
+                        <div className="w-full bg-[rgb(var(--color-surface-3))] rounded-full h-2 overflow-hidden">
+                          <div className="bg-gradient-to-r from-[rgb(var(--color-primary-cyan))] to-[rgb(var(--color-primary-blue))] h-2 w-3/4"></div>
                         </div>
                       </div>
                       <div className="flex gap-3">
-                        <div className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-center py-3 rounded-xl font-semibold transition-all duration-300 cursor-pointer">
+                        <div className="flex-1 bg-gradient-to-r from-[rgb(var(--color-primary-cyan))] to-[rgb(var(--color-primary-blue))] hover:from-[rgb(var(--color-primary-cyan)/0.8)] hover:to-[rgb(var(--color-primary-blue)/0.8)] text-white text-center py-3 rounded-xl font-semibold transition-all duration-300 cursor-pointer">
                           Become a patron
                         </div>
-                        <div className="w-12 flex-shrink-0 h-12 bg-slate-800/60 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/80 transition-colors cursor-pointer">
+                        <div className="w-12 flex-shrink-0 h-12 bg-[rgb(var(--color-surface-2)/0.6)] rounded-xl flex items-center justify-center text-[rgb(var(--color-text-secondary)/0.9)] hover:text-white hover:bg-[rgb(var(--color-surface-3)/0.8)] transition-colors cursor-pointer">
                           <Star className="w-5 h-5" />
                         </div>
                       </div>

@@ -3,7 +3,8 @@ import React from 'react'
 
 const Testimonial: React.FC = () => {
   return (
-    <div className="relative py-24 sm:py-32 lg:py-40 bg-slate-800 text-white">
+    // Replaced hardcoded colors with root variables
+    <div className="relative py-24 sm:py-32 lg:py-40 bg-[rgb(var(--color-surface-2))] text-[rgb(var(--color-text-primary))]">
       <img
         src="https://picsum.photos/seed/sisters/1920/1080"
         alt="Two women standing together, representing the Straight Up Sisters"
@@ -16,7 +17,7 @@ const Testimonial: React.FC = () => {
             and supporters."
           </p>
         </blockquote>
-        <figcaption className="mt-8 text-2xl font-bold tracking-wider text-cyan-400">
+        <figcaption className="mt-8 text-2xl font-bold tracking-wider text-[rgb(var(--color-text-link))]">
           Straight Up Sisters
         </figcaption>
       </div>

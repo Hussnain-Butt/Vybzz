@@ -1,3 +1,4 @@
+// src/components/PodcastersPage/Testimonials.tsx
 import React, { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -5,15 +6,14 @@ import { Star } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const professionalFont = "'Inter', sans-serif"
-
+// Data for the testimonials
 const testimonialsData = [
   {
     name: 'Sarah Chen',
     role: 'Digital Artist',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop',
     content:
-      'Patreon has completely transformed my creative career. I now have a steady income that allows me to focus on what I love most.',
+      'Vybzz Nation has completely transformed my creative career. I now have a steady income that allows me to focus on what I love most.',
     rating: 5,
   },
   {
@@ -71,20 +71,23 @@ const Testimonials: React.FC = () => {
     // Infinite marquee animation
     const marquee = marqueeRef.current
     if (marquee) {
-      const testimonials = marquee.children
+      const testimonials = Array.from(marquee.children)
       const timeline = gsap.timeline({ repeat: -1, defaults: { ease: 'none' } })
 
       gsap.set(marquee, { xPercent: 0 })
-      const totalWidth = Array.from(testimonials).reduce(
-        (acc, el) => acc + (el as HTMLElement).offsetWidth + 24,
+
+      // Calculate the total width of the original set of testimonials
+      const singleSetWidth = testimonials.slice(0, testimonials.length / 2).reduce(
+        (acc, el) => acc + (el as HTMLElement).offsetWidth + 24, // 24 is for space-x-6
         0,
       )
 
       timeline.to(marquee, {
-        xPercent: -50,
-        duration: testimonials.length * 4, // Adjust duration to control speed
+        x: -singleSetWidth, // Animate by the width of one set
+        duration: testimonialsData.length * 5, // Adjust duration to control speed
       })
 
+      // Pause animation on hover
       marquee.addEventListener('mouseenter', () => timeline.pause())
       marquee.addEventListener('mouseleave', () => timeline.play())
     }
@@ -96,15 +99,14 @@ const Testimonials: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="py-24 sm:py-32 bg-slate-950 overflow-hidden"
-      style={{ fontFamily: professionalFont }}
+      className="py-24 sm:py-32 bg-[rgb(var(--color-background-dark))] overflow-hidden"
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-16 lg:mb-20">
-          <h2 className="section-title text-5xl sm:text-6xl font-extrabold text-white mb-4 tracking-tight">
+          <h2 className="section-title text-5xl sm:text-6xl font-extrabold text-[rgb(var(--color-text-primary))] mb-4 tracking-tight">
             Creators love our platform
           </h2>
-          <p className="section-paragraph text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+          <p className="section-paragraph text-xl text-[rgb(var(--color-text-secondary))] max-w-3xl mx-auto leading-relaxed">
             Join thousands of creators who have built successful businesses with our platform.
           </p>
         </div>
@@ -116,25 +118,34 @@ const Testimonials: React.FC = () => {
           {duplicatedTestimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="testimonial-card flex-shrink-0 w-[400px] bg-slate-800/40 backdrop-blur-lg rounded-2xl p-8 border border-slate-700/50 shadow-2xl shadow-black/50 transition-all duration-300 group-hover:[animation-play-state:paused] hover:!bg-slate-800/60 hover:border-cyan-400/50"
+              className="testimonial-card flex-shrink-0 w-[400px] bg-[rgb(var(--color-surface-2)/0.4)] backdrop-blur-lg rounded-2xl p-8 border border-[rgb(var(--color-surface-3)/0.5)] shadow-2xl shadow-[rgb(var(--color-background-dark)/0.5)] transition-all duration-300 group-hover:[animation-play-state:paused] hover:!bg-[rgb(var(--color-surface-2)/0.6)] hover:border-[rgb(var(--color-text-link)/0.5)]"
             >
               <div className="flex items-center mb-4">
                 {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-cyan-400 fill-cyan-400" />
+                  <Star
+                    key={i}
+                    className="w-5 h-5 text-[rgb(var(--color-text-link))] fill-[rgb(var(--color-text-link))]"
+                  />
                 ))}
               </div>
 
-              <p className="text-slate-300 mb-6 leading-relaxed h-24">"{testimonial.content}"</p>
+              <p className="text-[rgb(var(--color-text-secondary))] mb-6 leading-relaxed h-24">
+                "{testimonial.content}"
+              </p>
 
               <div className="flex items-center">
                 <img
                   src={testimonial.avatar}
                   alt={testimonial.name}
-                  className="w-14 h-14 rounded-full object-cover mr-4 border-2 border-slate-600"
+                  className="w-14 h-14 rounded-full object-cover mr-4 border-2 border-[rgb(var(--color-surface-3))]"
                 />
                 <div>
-                  <h4 className="font-bold text-white text-lg">{testimonial.name}</h4>
-                  <p className="text-slate-400 text-sm">{testimonial.role}</p>
+                  <h4 className="font-bold text-[rgb(var(--color-text-primary))] text-lg">
+                    {testimonial.name}
+                  </h4>
+                  <p className="text-[rgb(var(--color-text-secondary)/0.8)] text-sm">
+                    {testimonial.role}
+                  </p>
                 </div>
               </div>
             </div>
