@@ -1,37 +1,78 @@
 // src/pages/Auth/LoginPage.tsx
-import React, { useRef, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useSignIn } from '@clerk/clerk-react'
 import { gsap } from 'gsap'
 
-// --- Importing all necessary image assets ---
 import VybzzLogo from '../../assets/Logo.png'
 import AppleLogo from '../../assets/apple.png'
 import FacebookLogo from '../../assets/facebook.png'
+import GoogleLogo from '../../assets/google.png'
 
-// --- SVG Icon for Google (Brand colors are kept as is) ---
-const GoogleIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M44.5 24.3h-2.5v-2.2h-1.8v2.2h-2.2v1.8h2.2v2.2h1.8v-2.2h2.5v-1.8z" fill="#4285F4" />
-    <path d="M24 44c11.05 0 20-8.95 20-20S35.05 4 24 4 4 12.95 4 24s8.95 20 20 20z" fill="#fff" />
-    <path d="M36 24c0-6.63-5.37-12-12-12v12h12z" fill="#1A73E8" />
-    <path d="M12 24c0 6.63 5.37 12 12 12V24H12z" fill="#34A853" />
-    <path d="M24 12c-6.63 0-12 5.37-12 12h12V12z" fill="#FBBC05" />
-  </svg>
-)
-
-// The main page component
 const LoginPage: React.FC = () => {
+  const { isLoaded, signIn, setActive } = useSignIn()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('') // reserved if you add password strategy later
+  const [pendingVerification, setPendingVerification] = useState(false)
+  const [code, setCode] = useState('')
+  const [error, setError] = useState<string | undefined>(undefined)
+
   const formContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const formContainer = formContainerRef.current
-    if (formContainer) {
+    if (formContainerRef.current) {
       gsap.fromTo(
-        formContainer,
+        formContainerRef.current,
         { opacity: 0, y: 50, scale: 0.98 },
         { opacity: 1, y: 0, scale: 1, duration: 1, ease: 'power3.out' },
       )
     }
   }, [])
+
+  const handleEmailContinue = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isLoaded) return
+
+    if (pendingVerification) {
+      try {
+        const result = await signIn.attemptFirstFactor({
+          strategy: 'email_code',
+          code,
+        })
+        if (result.status === 'complete') {
+          await setActive({ session: result.createdSessionId })
+          // ClerkProvider.afterSignInUrl handle karega
+        }
+      } catch (err: any) {
+        setError(err?.errors?.[0]?.longMessage || 'Verification failed')
+      }
+      return
+    }
+
+    try {
+      const signInAttempt = await signIn.create({ identifier: email })
+      if (signInAttempt.status === 'needs_first_factor') {
+        setPendingVerification(true)
+      }
+    } catch (err: any) {
+      setError(err?.errors?.[0]?.longMessage || 'Sign in failed')
+    }
+  }
+
+  // ✅ OAuth: redirectUrl + redirectUrlComplete + callback route required
+  const handleSocialLogin = async (strategy: 'oauth_google' | 'oauth_apple' | 'oauth_facebook') => {
+    if (!isLoaded) return
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy,
+        redirectUrl: '/sso-callback',
+        redirectUrlComplete: '/member/home',
+      })
+    } catch (err: any) {
+      console.error(`Error during ${strategy} auth:`, err)
+      setError(err?.errors?.[0]?.longMessage || 'OAuth failed')
+    }
+  }
 
   return (
     <div className="min-h-screen w-full bg-[rgb(var(--color-background-dark))] text-[rgb(var(--color-text-primary))] p-4 font-sans flex flex-col items-center justify-center">
@@ -44,61 +85,90 @@ const LoginPage: React.FC = () => {
           Log in or sign up
         </h1>
 
-        {/* --- Form Card --- */}
         <div className="bg-[rgb(var(--color-background-light))] rounded-2xl p-8 border border-[rgb(var(--color-surface-2))]">
-          <div className="space-y-3">
-            {/* Continue as User Button */}
-            <button className="w-full flex items-center justify-between text-left p-3 bg-[rgb(var(--color-surface-interactive))] rounded-lg border border-[rgb(var(--color-surface-3))] hover:border-[rgb(var(--color-text-link))] transition-colors duration-300">
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://picsum.photos/seed/bhussnain/40/40"
-                  alt="User avatar"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-[rgb(var(--color-text-primary))]">
-                    Continue as hussnain
-                  </p>
-                  <p className="text-xs text-[rgb(var(--color-text-secondary)/0.8)]">
-                    bhussnain966@gmail.com
-                  </p>
-                </div>
+          {!pendingVerification && (
+            <>
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleSocialLogin('oauth_google')}
+                  disabled={!isLoaded}
+                  className="relative w-full flex items-center justify-center py-3 bg-white text-black font-semibold rounded-lg hover:bg-slate-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <img
+                    src={GoogleLogo}
+                    alt="Google"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6"
+                  />
+                  <span>Continue with Google</span>
+                </button>
+                <button
+                  onClick={() => handleSocialLogin('oauth_apple')}
+                  disabled={!isLoaded}
+                  className="relative w-full flex items-center justify-center py-3 bg-white text-black font-semibold rounded-lg hover:bg-slate-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <img
+                    src={AppleLogo}
+                    alt="Apple"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6"
+                  />
+                  <span>Continue with Apple</span>
+                </button>
+                <button
+                  onClick={() => handleSocialLogin('oauth_facebook')}
+                  disabled={!isLoaded}
+                  className="relative w-full flex items-center justify-center py-3 bg-white text-black font-semibold rounded-lg hover:bg-slate-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <img
+                    src={FacebookLogo}
+                    alt="Facebook"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6"
+                  />
+                  <span>Continue with Facebook</span>
+                </button>
               </div>
-              <GoogleIcon />
-            </button>
 
-            {/* Social Login Buttons */}
-            <button className="w-full flex items-center justify-center gap-3 py-3 bg-white text-black font-semibold rounded-lg hover:bg-slate-200 transition-colors duration-300">
-              <img src={AppleLogo} alt="Apple" className="w-6 h-6" />
-              Continue with Apple
-            </button>
-            <button className="w-full flex items-center justify-center gap-3 py-3 bg-white text-black font-semibold rounded-lg hover:bg-slate-200 transition-colors duration-300">
-              <img src={FacebookLogo} alt="Facebook" className="w-6 h-6" />
-              Continue with Facebook
-            </button>
-          </div>
+              <div className="flex items-center my-6">
+                <hr className="w-full border-[rgb(var(--color-surface-3))]" />
+                <span className="px-3 text-sm text-[rgb(var(--color-text-muted))]">or</span>
+                <hr className="w-full border-[rgb(var(--color-surface-3))]" />
+              </div>
+            </>
+          )}
 
-          {/* Divider */}
-          <div className="flex items-center my-6">
-            <hr className="w-full border-[rgb(var(--color-surface-3))]" />
-            <span className="px-3 text-sm text-[rgb(var(--color-text-muted))]">or</span>
-            <hr className="w-full border-[rgb(var(--color-surface-3))]" />
-          </div>
-
-          {/* Email Form */}
-          <div className="space-y-4">
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full p-3 bg-[rgb(var(--color-surface-interactive))] text-[rgb(var(--color-text-primary))] rounded-lg border border-[rgb(var(--color-surface-3))] placeholder-[rgb(var(--color-text-secondary)/0.8)] focus:border-[rgb(var(--color-text-link))] focus:ring-[rgb(var(--color-text-link))] focus:ring-1 outline-none transition-colors duration-300"
-            />
-            <button className="w-full p-3 bg-slate-300 text-black font-bold rounded-lg hover:bg-white transition-colors duration-300">
-              Continue
+          <form onSubmit={handleEmailContinue} className="space-y-4">
+            {pendingVerification ? (
+              <>
+                <p className="text-center text-sm text-[rgb(var(--color-text-secondary))]">
+                  A verification code has been sent. Please enter it below.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Verification Code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full p-3 bg-[rgb(var(--color-surface-interactive))] text-[rgb(var(--color-text-primary))] rounded-lg border border-[rgb(var(--color-surface-3))] placeholder-[rgb(var(--color-text-secondary)/0.8)] focus:border-[rgb(var(--color-text-link))] focus:ring-[rgb(var(--color-text-link))] focus:ring-1 outline-none transition-colors duration-300"
+                />
+              </>
+            ) : (
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 bg-[rgb(var(--color-surface-interactive))] text-[rgb(var(--color-text-primary))] rounded-lg border border-[rgb(var(--color-surface-3))] placeholder-[rgb(var(--color-text-secondary)/0.8)] focus:border-[rgb(var(--color-text-link))] focus:ring-[rgb(var(--color-text-link))] focus:ring-1 outline-none transition-colors duration-300"
+              />
+            )}
+            <button
+              type="submit"
+              disabled={!isLoaded}
+              className="w-full p-3 bg-slate-300 text-black font-bold rounded-lg hover:bg-white transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {pendingVerification ? 'Verify Code' : 'Continue'}
             </button>
-          </div>
+            {error && <p className="text-red-500 text-sm text-center mt-2">{error}</p>}
+          </form>
         </div>
 
-        {/* Help Link */}
         <div className="text-center mt-8">
           <a
             href="#"
@@ -107,8 +177,6 @@ const LoginPage: React.FC = () => {
             Need help signing in?
           </a>
         </div>
-
-        {/* Terms and Policy */}
         <p className="text-xs text-[rgb(var(--color-text-muted))] text-center mt-10 max-w-xs mx-auto">
           By signing up, you agree to Vybzz Nation's{' '}
           <a href="#" className="underline hover:text-[rgb(var(--color-text-secondary))]">

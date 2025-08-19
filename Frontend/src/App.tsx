@@ -1,18 +1,19 @@
 // src/App.tsx
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import {
+  SignedIn,
+  SignedOut,
+  RedirectToSignIn,
+  AuthenticateWithRedirectCallback,
+} from '@clerk/clerk-react'
 
-// --- Import Layouts and Pages ---
-
-// Import the new layout component
 import MainLayout from './components/Layout/MainLayout'
-
-// Import your pages
+import LoginPage from './pages/Auth/LoginPage'
 import Landing from './pages/Landing'
 import GetToKnowYourListeners from './pages/Podcasters/GetToKnowYourListeners'
-import LoginPage from './pages/Auth/LoginPage'
 
-// Import Dashboard Pages
+import DashboardLayout from './components/Layout/DashboardLayout'
 import DashboardHome from './pages/dashboard/DashboardHome'
 import Library from './pages/dashboard/Library'
 import Audience from './pages/dashboard/Audience'
@@ -22,7 +23,6 @@ import Promotions from './pages/dashboard/Promotions'
 import Community from './pages/dashboard/Community'
 import Notifications from './pages/dashboard/Notifications'
 import Settings from './pages/dashboard/Settings'
-import DashboardLayout from './components/Layout/DashboardLayout'
 import PostsPage from './pages/dashboard/library/PostsPage'
 import CollectionsPage from './pages/dashboard/library/CollectionsPage'
 import DraftsPage from './pages/dashboard/library/DraftsPage'
@@ -47,79 +47,218 @@ import PodcastPage from './pages/dashboard/settings/PodcastPage'
 import NotificationsSettingsPage from './pages/dashboard/settings/NotificationsPage'
 import BillingPage from './pages/dashboard/settings/BillingPage'
 
+import MemberHome from './pages/member/MemberHome'
+import MemberExplore from './pages/member/MemberExplore'
+import MemberCommunity from './pages/member/MemberCommunity'
+import MemberNotifications from './pages/member/MemberNotifications'
+import SsoCallbackPage from './pages/Auth/SsoCallbackPage'
+import MemberLayout from './components/Layout/MemberLayout'
+import MemberChatsPage from './pages/member/memberComunity/MemberChatsPage'
+import MDirectMessagesPage from './pages/member/memberComunity/MDirectMessagesPage'
+// Member Settings Nested Pages
+import MemberSettings from './pages/member/MemberSettings'
+import Basics from './pages/member/membersettings/Basics'
+import Account from './pages/member/membersettings/Account'
+import EmailNotifications from './pages/member/membersettings/EmailNotifications'
+import Memberships from './pages/member/membersettings/Memberships'
+import BillingHistory from './pages/member/membersettings/BillingHistory'
+import PaymentMethods from './pages/member/membersettings/PaymentMethods'
+import ConnectedApps from './pages/member/membersettings/ConnectedApps'
+import BlockedUsers from './pages/member/membersettings/BlockedUsers'
+
+// App.tsx ke top par yeh imports add karein
+import AdminLoginPage, { fakeAuth } from './pages/admin/AdminLoginPage'
+import AdminLayout from './components/Layout/AdminLayout'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AdminSettings from './pages/admin/AdminSettings'
+import CutThroughTheNoise from './pages/Podcasters/CutThroughTheNoise'
+import MoveWayToGetPaid from './pages/Podcasters/MoveWayToGetPaid'
+import OtherPodcasterOnVybzz from './pages/Podcasters/OtherPodcasterOnVybzz'
+import TurnYourViewers from './pages/VideoCreators/TurnYourViewer'
+import MoreWayToGetPaid from './pages/VideoCreators/MoreWayToGetPaid'
+import ReachEveryFan from './pages/VideoCreators/ReachEveryFan'
+import OtherVideoCreators from './pages/VideoCreators/OtherVideoCreators'
+import FromYourMind from './pages/Musicians/FromYourMind'
+import MoreWayToGetPaidMusicians from './pages/Musicians/MoreWayToGetPaid'
+import ShareMoreThan from './pages/Musicians/ShareMoreThan'
+import OtherMusicians from './pages/Musicians/OtherMusicians'
+
+// Protected Route Component for Admin
+const AdminProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  if (!fakeAuth.isAuthenticated) {
+    // Agar user authenticated nahi hai, to login page par redirect karein
+    return <Navigate to="/admin" replace />
+  }
+  return children
+}
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Route for the standalone Login page (NO Header/Footer) */}
-        <Route path="/login" element={<LoginPage />} />
-
-        {/* Routes that will use the MainLayout (WITH Header/Footer) */}
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Landing />} />
-          <Route path="/creators/podcasters/listeners" element={<GetToKnowYourListeners />} />
+    <Routes>
+      {/* OAuth callback: MUST HAVE */}
+      <Route path="/sso-callback" element={<AuthenticateWithRedirectCallback />} />
+      {/* Public */}
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<Landing />} />
+        <Route path="/creators/podcasters/listeners" element={<GetToKnowYourListeners />} />
+        <Route path="/creators/podcasters/cutthrough" element={<CutThroughTheNoise />} />
+        <Route path="/creators/podcasters/moveway" element={<MoveWayToGetPaid />} />
+        <Route path="/creators/podcasters/otherpodcaster" element={<OtherPodcasterOnVybzz />} />
+        <Route path="/creators/videocreator/turnyourviewer" element={<TurnYourViewers />} />
+        <Route path="/creators/videocreator/moreway" element={<MoreWayToGetPaid />} />
+        <Route path="/creators/videocreator/reachfan" element={<ReachEveryFan />} />
+        <Route path="/creators/videocreator/other" element={<OtherVideoCreators />} />
+        <Route path="/creators/musicians/fromyourmind" element={<FromYourMind />} />
+        <Route path="/creators/musicians/moreway" element={<MoreWayToGetPaidMusicians />} />
+        <Route path="/creators/musicians/sharemorethan" element={<ShareMoreThan />} />
+        <Route path="/creators/musicians/other" element={<OtherMusicians />} />
+      </Route>
+      {/* Login */}
+      <Route
+        path="/login"
+        element={
+          <>
+            <SignedIn>
+              <Navigate to="/member/home" replace />
+            </SignedIn>
+            <SignedOut>
+              <LoginPage />
+            </SignedOut>
+          </>
+        }
+      />
+      {/* Creator Dashboard (protected) */}
+      <Route
+        path="/dashboard/*"
+        element={
+          <>
+            <SignedIn>
+              <DashboardLayout />
+            </SignedIn>
+            <SignedOut>
+              {/* ✅ Explicit signInUrl — /undefined ko kill karta hai */}
+              <RedirectToSignIn signInUrl="/login" />
+            </SignedOut>
+          </>
+        }
+      >
+        <Route path="" element={<DashboardHome />} />
+        <Route path="library" element={<Library />}>
+          <Route index element={<Navigate to="posts" replace />} />
+          <Route path="posts" element={<PostsPage />} />
+          <Route path="collections" element={<CollectionsPage />} />
+          <Route path="drafts" element={<DraftsPage />} />
         </Route>
-        {/* Routes for the Creator's Dashboard */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardHome />} />
-          {/* Library route ab ek parent route hai jo nested routes ko handle karta hai */}
-          <Route path="library" element={<Library />}>
-            <Route index element={<Navigate to="posts" replace />} />
-            <Route path="posts" element={<PostsPage />} />
-            <Route path="collections" element={<CollectionsPage />} />
-            <Route path="drafts" element={<DraftsPage />} />
-          </Route>
-
-          {/* --- (UPDATED) Audience Nested Routes --- */}
-          <Route path="audience" element={<Audience />}>
-            <Route index element={<Navigate to="relationship-manager" replace />} />
-            <Route path="relationship-manager" element={<RelationshipManagerPage />} />
-            <Route path="benefits" element={<BenefitsPage />} />
-            <Route path="exit-surveys" element={<ExitSurveysPage />} />
-          </Route>
-          {/* --- (UPDATED) Insights Nested Routes --- */}
-          <Route path="insights" element={<Insights />}>
-            <Route index element={<Navigate to="membership" replace />} />
-            <Route path="membership" element={<MembershipPage />} />
-            <Route path="earnings" element={<EarningsPage />} />
-            <Route path="posts" element={<PostsPage />} />
-
-            <Route path="surveys" element={<SurveysPage />} />
-            <Route path="traffic" element={<TrafficPage />} />
-          </Route>
-          {/* --- (UPDATED) Payouts Nested Routes --- */}
-          <Route path="payouts" element={<Payouts />}>
-            <Route index element={<Navigate to="withdraw" replace />} />
-            <Route path="withdraw" element={<WithdrawPage />} />
-            <Route path="documents" element={<DocumentsPage />} />
-          </Route>
-          {/* --- (UPDATED) Promotions Nested Routes --- */}
-          <Route path="promotions" element={<Promotions />}>
-            <Route index element={<Navigate to="autopilot" replace />} />
-            <Route path="autopilot" element={<AutopilotPage />} />
-            <Route path="discounts" element={<DiscountsPage />} />
-            <Route path="gifts" element={<GiftsPage />} />
-          </Route>
-          {/* --- (UPDATED) Community Nested Routes --- */}
-          <Route path="community" element={<Community />}>
-            <Route index element={<Navigate to="chats" replace />} />
-            <Route path="chats" element={<ChatsPage />} />
-            <Route path="direct-messages" element={<DirectMessagesPage />} />
-          </Route>
-          <Route path="notifications" element={<Notifications />} />
-          {/* --- (UPDATED) Settings Nested Routes --- */}
-          <Route path="settings" element={<Settings />}>
-            <Route index element={<Navigate to="account" replace />} />
-            <Route path="account" element={<AccountPage />} />
-            <Route path="team" element={<TeamPage />} />
-            <Route path="apps" element={<AppsPage />} />
-            <Route path="podcast" element={<PodcastPage />} />
-            <Route path="notifications" element={<NotificationsSettingsPage />} />
-            <Route path="billing" element={<BillingPage />} />
-          </Route>
+        <Route path="audience" element={<Audience />}>
+          <Route index element={<Navigate to="relationship-manager" replace />} />
+          <Route path="relationship-manager" element={<RelationshipManagerPage />} />
+          <Route path="benefits" element={<BenefitsPage />} />
+          <Route path="exit-surveys" element={<ExitSurveysPage />} />
         </Route>
-      </Routes>
-    </Router>
+        <Route path="insights" element={<Insights />}>
+          <Route index element={<Navigate to="membership" replace />} />
+          <Route path="membership" element={<MembershipPage />} />
+          <Route path="earnings" element={<EarningsPage />} />
+          <Route path="posts" element={<PostsPage />} />
+          <Route path="surveys" element={<SurveysPage />} />
+          <Route path="traffic" element={<TrafficPage />} />
+        </Route>
+        <Route path="payouts" element={<Payouts />}>
+          <Route index element={<Navigate to="withdraw" replace />} />
+          <Route path="withdraw" element={<WithdrawPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
+        </Route>
+        <Route path="promotions" element={<Promotions />}>
+          <Route index element={<Navigate to="autopilot" replace />} />
+          <Route path="autopilot" element={<AutopilotPage />} />
+          <Route path="discounts" element={<DiscountsPage />} />
+          <Route path="gifts" element={<GiftsPage />} />
+        </Route>
+        <Route path="community" element={<Community />}>
+          <Route index element={<Navigate to="chats" replace />} />
+          <Route path="chats" element={<ChatsPage />} />
+          <Route path="direct-messages" element={<DirectMessagesPage />} />
+        </Route>
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="settings" element={<Settings />}>
+          <Route index element={<Navigate to="account" replace />} />
+          <Route path="account" element={<AccountPage />} />
+          <Route path="team" element={<TeamPage />} />
+          <Route path="apps" element={<AppsPage />} />
+          <Route path="podcast" element={<PodcastPage />} />
+          <Route path="notifications" element={<NotificationsSettingsPage />} />
+          <Route path="billing" element={<BillingPage />} />
+        </Route>
+      </Route>
+      {/* ================================================= */}
+      {/* =============== ADMIN SECTION START =============== */}
+      {/* ================================================= */}
+
+      {/* 1. Admin Login Route (Public) */}
+      {/* Yahan humne test h1 tag ko asal AdminLoginPage se badal diya hai */}
+      <Route path="/admin" element={<AdminLoginPage />} />
+
+      {/* 2. Protected Admin Dashboard Routes */}
+      {/* Yahan humne path ko "/admin/*" se "/admin-dashboard/*" kar diya hai taake conflict na ho */}
+      <Route
+        path="/admin-dashboard/*"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout />
+          </AdminProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="settings" element={<AdminSettings />} />
+      </Route>
+
+      {/* =============================================== */}
+      {/* =============== ADMIN SECTION END =============== */}
+      {/* =============================================== */}
+      {/* Member Dashboard (protected) */}
+      <Route
+        path="/member/*"
+        element={
+          <>
+            <SignedIn>
+              <MemberLayout />
+            </SignedIn>
+            <SignedOut>
+              <RedirectToSignIn signInUrl="/login" />
+            </SignedOut>
+          </>
+        }
+      >
+        <Route index element={<Navigate to="home" replace />} />
+        <Route path="home" element={<MemberHome />} />
+        <Route path="explore" element={<MemberExplore />} />
+        <Route path="community" element={<Community />}>
+          <Route index element={<Navigate to="chats" replace />} />
+          <Route path="chats" element={<MemberChatsPage />} />
+          <Route path="direct-messages" element={<MDirectMessagesPage />} />
+        </Route>
+        <Route path="notifications" element={<MemberNotifications />} />
+        {/* === NESTED SETTINGS ROUTES START HERE === */}
+        <Route path="settings" element={<MemberSettings />}>
+          <Route index element={<Navigate to="basics" replace />} />
+          <Route path="basics" element={<Basics />} />
+          <Route path="account" element={<Account />} />
+          <Route path="notifications" element={<EmailNotifications />} />
+          <Route path="memberships" element={<Memberships />} />
+          <Route path="billing" element={<BillingHistory />} />
+          <Route path="payment-methods" element={<PaymentMethods />} />
+          <Route path="connected-apps" element={<ConnectedApps />} />
+          <Route path="blocked-users" element={<BlockedUsers />} />
+        </Route>
+      </Route>
+      {/* Fallback: kabhi /undefined aa bhi jaye to safe redirect */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/sso-callback" element={<SsoCallbackPage />} />
+    </Routes>
   )
 }
 

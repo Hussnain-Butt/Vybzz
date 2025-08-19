@@ -5,11 +5,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Is code ko apni index.css file mein add karein */
+html {
+  /* Yeh horizontal overflow ko rokega, jo kabhi-kabhi double vertical scrollbar ka kaaran banta hai */
+  overflow-x: hidden;
+}
+
 /* 
   Define the entire color palette and other root variables
   based on the colors used across your components.
 */
 :root {
+  --color-background-dark: 3 6 23; /* slate-950 */
+  --color-surface-1: 15 23 42; /* slate-900 */
+  --color-surface-2: 30 41 59; /* slate-800 */
+  --color-text-primary: 241 245 249; /* slate-100 */
+  --color-text-secondary: 203 213 225; /* slate-300 */
+  --color-text-muted: 148 163 184; /* slate-400 */
+  --color-text-link: 34 211 238; /* cyan-400 */
+  --color-primary-cyan: 34 211 238;
+  --color-primary-blue: 59 130 246;
+  --color-accent-pink: 236 72 153;
+  --color-accent-orange: 249 115 22;
   /* Brand and Accent Colors */
   --color-primary-cyan: 14 165 233; /* #0ea5e9 */
   --color-primary-blue: 59 130 246; /* #3b82fd */
@@ -37,6 +54,7 @@
 body {
   font-family: 'Inter', sans-serif;
   background-color: rgb(var(--color-background-dark)); /* Set a default dark background */
+  overflow-x: hidden;
 }
 
 /* 
@@ -86,4 +104,49 @@ body {
     min-width: unset !important;
     padding: 1rem !important;
   }
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* --- Sidebar overlay hard reset --- */
+.admin-sidebar *::before,
+.admin-sidebar *::after {
+  content: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  mix-blend-mode: normal !important;
+}
+
+/* Ensure sidebar content stays above any accidental layers */
+.admin-sidebar {
+  z-index: 50;
+}
+.admin-sidebar * {
+  position: relative;
+  z-index: 1;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.group-hover\:rotate-y-10:hover {
+  transform: rotateY(10deg) scale(1.05);
 }

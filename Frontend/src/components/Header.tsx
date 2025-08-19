@@ -5,6 +5,7 @@ import { gsap } from 'gsap'
 import { Menu, X, Search, ChevronDown } from 'lucide-react'
 import SearchOverlay from './SearchOverlay'
 import Logo from '../assets/Logo.png'
+import { Link } from 'react-router-dom'
 
 // --- Button component (no changes) ---
 const Button: React.FC<any> = ({ children, className, ...props }) => (
@@ -31,51 +32,57 @@ const dropdownData = {
         href: '#',
         links: [
           { label: 'Get to know your listeners', href: '/creators/podcasters/listeners' },
-          { label: 'Cut through the noise', href: '#' },
-          { label: 'More ways to get paid', href: '#' },
-          { label: 'Other podcasters on Vybzz Nation', href: '#' },
+          { label: 'Cut through the noise', href: '/creators/podcasters/cutthrough' },
+          { label: 'More ways to get paid', href: '/creators/podcasters/moveway' },
+          {
+            label: 'Other podcasters on Vybzz Nation',
+            href: '/creators/podcasters/otherpodcaster',
+          },
         ],
       },
       {
         title: 'Video creators',
         href: '#',
         links: [
-          { label: 'Turn your viewers into your people', href: '#' },
-          { label: 'Reach every fan, every time', href: '#' },
-          { label: 'More ways to get paid', href: '#' },
-          { label: 'Other video creators on Vybzz Nation', href: '#' },
+          {
+            label: 'Turn your viewers into your people',
+            href: '/creators/videocreator/turnyourviewer',
+          },
+          { label: 'Reach every fan, every time', href: '/creators/videocreator/reachfan' },
+          { label: 'More ways to get paid', href: '/creators/videocreator/moreway' },
+          { label: 'Other video creators on Vybzz Nation', href: '/creators/videocreator/other' },
         ],
       },
       {
         title: 'Musicians',
         href: '#',
         links: [
-          { label: 'From your mind to their ears', href: '#' },
-          { label: 'Share more than music', href: '#' },
-          { label: 'More ways to get paid', href: '#' },
-          { label: 'Other musicians on Vybzz Nation', href: '#' },
+          { label: 'From your mind to their ears', href: '/creators/musicians/fromyourmind' },
+          { label: 'Share more than music', href: '/creators/musicians/sharemorethan' },
+          { label: 'More ways to get paid', href: '/creators/musicians/moreway' },
+          { label: 'Other musicians on Vybzz Nation', href: '/creators/musicians/other' },
         ],
       },
-      {
-        title: 'Artists',
-        href: '#',
-        links: [
-          { label: 'Earning made easy', href: '#' },
-          { label: 'Create what inspires you', href: '#' },
-          { label: 'Build community around your art', href: '#' },
-          { label: 'Other artists on Vybzz Nation', href: '#' },
-        ],
-      },
-      {
-        title: 'Game devs',
-        href: '#',
-        links: [
-          { label: 'A safe way to get paid', href: '#' },
-          { label: 'Selling made simple', href: '#' },
-          { label: 'Where real community thrives', href: '#' },
-          { label: 'Other game devs on Vybzz Nation', href: '#' },
-        ],
-      },
+      // {
+      //   title: 'Artists',
+      //   href: '#',
+      //   links: [
+      //     { label: 'Earning made easy', href: '#' },
+      //     { label: 'Create what inspires you', href: '#' },
+      //     { label: 'Build community around your art', href: '#' },
+      //     { label: 'Other artists on Vybzz Nation', href: '#' },
+      //   ],
+      // },
+      // {
+      //   title: 'Game devs',
+      //   href: '#',
+      //   links: [
+      //     { label: 'A safe way to get paid', href: '#' },
+      //     { label: 'Selling made simple', href: '#' },
+      //     { label: 'Where real community thrives', href: '#' },
+      //     { label: 'Other game devs on Vybzz Nation', href: '#' },
+      //   ],
+      // },
     ],
     featured: [
       {
@@ -125,23 +132,23 @@ const dropdownData = {
           { label: 'App integrations', href: '#' },
         ],
       },
-      {
-        title: 'Get business support',
-        href: '#',
-        links: [
-          { label: 'Help when you need it', href: '#' },
-          { label: 'Policies to protect you', href: '#' },
-          { label: 'Payments powered by Vybzz Nation', href: '#' },
-        ],
-      },
-      {
-        title: 'Earning made easy',
-        href: '#',
-        links: [
-          { label: 'Run a membership', href: '#' },
-          { label: 'Sell digital products', href: '#' },
-        ],
-      },
+      // {
+      //   title: 'Get business support',
+      //   href: '#',
+      //   links: [
+      //     { label: 'Help when you need it', href: '#' },
+      //     { label: 'Policies to protect you', href: '#' },
+      //     { label: 'Payments powered by Vybzz Nation', href: '#' },
+      //   ],
+      // },
+      // {
+      //   title: 'Earning made easy',
+      //   href: '#',
+      //   links: [
+      //     { label: 'Run a membership', href: '#' },
+      //     { label: 'Sell digital products', href: '#' },
+      //   ],
+      // },
     ],
   },
   pricing: {
@@ -259,22 +266,22 @@ const Header: React.FC = () => {
       >
         {categories.map((cat) => (
           <div key={cat.title} className="min-w-0">
-            <a href={cat.href} className="text-cyan-300 font-bold text-base mb-3 block group">
+            <Link to={cat.href} className="text-cyan-300 font-bold text-base mb-3 block group">
               {cat.title}
               <span className="opacity-0 group-hover:opacity-100 group-hover:ml-1 transition-all duration-300">
                 →
               </span>
-            </a>
+            </Link>
             <div className="flex flex-col space-y-1 w-full">
               {cat.links.map((link) => (
-                <a
+                <Link
                   key={link.label}
-                  href={link.href}
+                  to={link.href}
                   className="group flex items-center text-sm text-slate-300 hover:text-white transition-all duration-300 py-1 rounded-md -ml-2 px-2 hover:bg-blue-500/10"
                 >
                   <span className="w-0 h-full bg-cyan-400 mr-2 group-hover:w-1 transition-all duration-300 ease-in-out"></span>
                   {link.label}
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -286,7 +293,7 @@ const Header: React.FC = () => {
       case 'creators':
         content = (
           <div className="p-8 pt-7 ml-10">
-            {renderLinks(dropdownData.creators.categories as any, 6)}
+            {renderLinks(dropdownData.creators.categories as any, 3)}
             <hr className="my-7 border-slate-800" />
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 justify-start">
               {dropdownData.creators.featured.map((item) => (
@@ -294,8 +301,8 @@ const Header: React.FC = () => {
                   key={item.name}
                   className="group relative rounded-xl p-px bg-slate-900 hover:bg-gradient-to-br from-cyan-400 to-blue-600 transition-all duration-300 transform-gpu hover:-translate-y-1 hover:scale-[1.02]"
                 >
-                  <a
-                    href={item.href}
+                  <Link
+                    to={item.href}
                     className="block rounded-[11px] overflow-hidden h-full bg-slate-900"
                   >
                     <div className="relative h-40">
@@ -311,7 +318,7 @@ const Header: React.FC = () => {
                         </h3>
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 </div>
               ))}
             </div>
@@ -366,12 +373,12 @@ const Header: React.FC = () => {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-5">
           <div className="relative flex justify-between items-center h-20">
             <div className="flex-shrink-0">
-              <a href="/" className="flex items-center">
+              <Link to="/" className="flex items-center">
                 <img src={Logo} alt="" className="w-12" />
                 <span className="ml-3 text-2xl font-bold text-white tracking-tight">
                   Vybzz Nation
                 </span>
-              </a>
+              </Link>
             </div>
             <nav className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
               <div
@@ -385,8 +392,8 @@ const Header: React.FC = () => {
                     onMouseLeave={handleNavMouseLeave}
                     className="relative px-4 py-2 cursor-pointer transition-all duration-200 rounded-full group"
                   >
-                    <a
-                      href={item.href || '#'}
+                    <Link
+                      to={item.href || '#'}
                       className={`transition-colors duration-300 ${
                         item.highlight
                           ? 'text-cyan-300 font-semibold'
@@ -394,7 +401,7 @@ const Header: React.FC = () => {
                       }`}
                     >
                       {item.label}
-                    </a>
+                    </Link>
                     <div className="absolute left-4 right-4 bottom-1 h-[2px] bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                     {item.dropdown &&
                       renderDropdown(item.key as 'creators' | 'features' | 'pricing')}
@@ -409,18 +416,18 @@ const Header: React.FC = () => {
               >
                 <Search className="w-5 h-5" />
               </Button>
-              <a
-                href="/login"
+              <Link
+                to="/login"
                 className="text-slate-200 font-medium px-4 py-2 hover:text-white hover:bg-blue-500/10 rounded-full transition-colors duration-200"
               >
                 Log in
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                to="#"
                 className="bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-semibold px-5 py-2.5 rounded-full hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transform transition-all duration-300"
               >
                 Get Started
-              </a>
+              </Link>
             </div>
             <button
               className="lg:hidden p-2 text-slate-200"
@@ -467,21 +474,21 @@ const Header: React.FC = () => {
                             dropdownData[item.key as keyof typeof dropdownData] as any
                           ).categories.map((cat: any) => (
                             <div key={cat.title} className="py-1">
-                              <a
-                                href={cat.href}
+                              <Link
+                                to={cat.href}
                                 className="block px-2 text-sm font-semibold text-cyan-400 mb-1"
                               >
                                 {cat.title}
-                              </a>
+                              </Link>
                               {cat.links.map((link: any) => (
-                                <a
+                                <Link
                                   key={link.label}
-                                  href={link.href}
+                                  to={link.href}
                                   onClick={() => setIsMenuOpen(false)}
                                   className="block rounded-md px-2 py-2 text-slate-300 hover:bg-blue-500/10 hover:text-white"
                                 >
                                   {link.label}
-                                </a>
+                                </Link>
                               ))}
                             </div>
                           ))}
@@ -489,15 +496,15 @@ const Header: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <a
-                      href={item.href || '#'}
+                    <Link
+                      to={item.href || '#'}
                       className={`block px-4 py-3 rounded-lg text-white font-semibold transition-all duration-200 ${
                         item.highlight ? 'bg-blue-500/20 text-cyan-300' : 'hover:bg-blue-500/10'
                       }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {item.label}
-                    </a>
+                    </Link>
                   )}
                 </div>
               ))}
@@ -509,13 +516,13 @@ const Header: React.FC = () => {
                   <Search className="w-5 h-5" />
                   <span>Search</span>
                 </Button>
-                <a
-                  href="#"
+                <Link
+                  to="#"
                   onClick={() => setIsMenuOpen(false)}
                   className="mobile-menu-item w-full text-center text-slate-200 font-medium px-4 py-3 hover:bg-blue-500/10 rounded-full"
                 >
                   Log in
-                </a>
+                </Link>
                 <a
                   href="#"
                   onClick={() => setIsMenuOpen(false)}

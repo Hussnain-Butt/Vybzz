@@ -33,7 +33,7 @@ const CursorFollower: React.FC = () => {
       })
     }
 
-    // --- The new, professional hover effect ---
+    // Professional hover effect (no blur)
     const handleMouseEnter = () => {
       gsap.to(cursor, {
         scale: 0.3,
@@ -42,8 +42,8 @@ const CursorFollower: React.FC = () => {
       })
       gsap.to(follower, {
         scale: 2.5,
-        backgroundColor: 'transparent', // Fade out background to create a ring
-        borderColor: 'rgba(0, 220, 255, 0.4)', // Make border brighter
+        backgroundColor: 'transparent', // ring effect
+        borderColor: 'rgba(0, 220, 255, 0.4)',
         duration: 0.3,
         ease: 'power3.out',
       })
@@ -57,14 +57,13 @@ const CursorFollower: React.FC = () => {
       })
       gsap.to(follower, {
         scale: 1,
-        backgroundColor: 'rgba(0, 220, 255, 0.05)', // Return to glassy look
-        borderColor: 'rgba(0, 220, 255, 0.15)', // Return to subtle border
+        backgroundColor: 'rgba(0, 220, 255, 0.05)',
+        borderColor: 'rgba(0, 220, 255, 0.15)',
         duration: 0.3,
         ease: 'power3.out',
       })
     }
 
-    // Add event listeners to the document and interactive elements
     document.addEventListener('mousemove', handleMouseMove)
 
     const interactiveElements = document.querySelectorAll(
@@ -75,7 +74,6 @@ const CursorFollower: React.FC = () => {
       el.addEventListener('mouseleave', handleMouseLeave)
     })
 
-    // Cleanup function
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       interactiveElements.forEach((el) => {
@@ -87,16 +85,17 @@ const CursorFollower: React.FC = () => {
 
   return (
     <>
-      {/* Main cursor dot - Changed to vibrant cyan */}
+      {/* Main cursor dot */}
       <div
         ref={cursorRef}
         className="fixed w-3 h-3 bg-cyan-400 rounded-full pointer-events-none z-[9999] mix-blend-difference"
       />
 
-      {/* Follower circle - Redesigned with "glassmorphism" effect */}
+      {/* Follower circle — NO backdrop blur */}
       <div
         ref={followerRef}
-        className="fixed w-12 h-12 bg-cyan-400/5 backdrop-blur-sm border border-cyan-400/20 rounded-full pointer-events-none z-[9998]"
+        className="fixed w-12 h-12 bg-cyan-400/5 border border-cyan-400/20 rounded-full pointer-events-none z-[9998] backdrop-blur-0"
+        style={{ backdropFilter: 'none' }}
       />
     </>
   )
