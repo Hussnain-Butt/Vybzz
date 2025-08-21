@@ -1,7 +1,6 @@
 import React from 'react'
 import Header from '../components/Header'
 import Hero from '../components/Hero'
-import CursorFollower from '../components/CursorFollower'
 import Features from '../components/Features'
 import Testimonials from '../components/Testimonials'
 import CTA from '../components/CTA'
@@ -13,7 +12,6 @@ import TestimonialQuote from '../components/TestimonialQuote'
 const Landing: React.FC = () => {
   return (
     <div className="min-h-screen">
-      <CursorFollower />
       <Header />
       <Hero />
       <CreativitySection />
