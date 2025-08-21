@@ -99,6 +99,8 @@ import PaymentPoweredBy from './pages/Prices/PaymentPoweredBy'
 import PaidMembership from './pages/Prices/PaidMembership'
 import EarningModeEasy from './pages/Prices/EarningModeEasy'
 import Commerce from './pages/Prices/Commerce'
+import Resources from './pages/Resources'
+import Updates from './pages/Updates'
 
 // Protected Route Component for Admin
 const AdminProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -139,6 +141,8 @@ function App() {
           <Route path="/prices/paidmembership" element={<PaidMembership />} />
           <Route path="/prices/earningmode" element={<EarningModeEasy />} />
           <Route path="/prices/commerce" element={<Commerce />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/updates" element={<Updates />} />
 
           <Route
             path="/features/buildcommunity/everyposteverytime"

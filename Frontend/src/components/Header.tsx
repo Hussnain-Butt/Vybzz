@@ -19,8 +19,8 @@ const navItems = [
   { label: 'Creators', key: 'creators', dropdown: true },
   { label: 'Features', key: 'features', dropdown: true },
   { label: 'Pricing', key: 'pricing', dropdown: true },
-  { label: 'Resources', key: 'resources', dropdown: false, href: '#' },
-  { label: 'Updates', key: 'updates', dropdown: false, href: '#', highlight: true },
+  { label: 'Resources', key: 'resources', dropdown: false, href: '/resources' },
+  { label: 'Updates', key: 'updates', dropdown: false, href: '/updates' },
 ]
 
 // --- UPDATED Dropdown data with all hrefs replaced with '#' ---
