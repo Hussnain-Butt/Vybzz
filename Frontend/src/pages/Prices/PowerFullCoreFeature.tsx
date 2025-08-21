@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useEffect, useRef } from 'react'
 import {
   FaChartPie,
   FaCogs,
@@ -22,7 +23,23 @@ gsap.registerPlugin(ScrollTrigger)
 const PowerFullCoreFeature = () => {
   const componentRef = useRef(null)
 
-  // Features ko categories mein organize karein
+  // Hero section mein dikhane ke liye icons
+  const heroIcons = [
+    { icon: <FaChartPie />, position: 'top-[15%] left-[10%] sm:top-[20%] sm:left-[15%]' },
+    { icon: <FaRocket />, position: 'top-[15%] right-[10%] sm:top-[20%] sm:right-[15%]' },
+    { icon: <FaShieldAlt />, position: 'bottom-[15%] left-[20%] sm:bottom-[20%] sm:left-[25%]' },
+    { icon: <FaCogs />, position: 'bottom-[15%] right-[20%] sm:bottom-[20%] sm:right-[25%]' },
+    {
+      icon: <FaUsers className="hidden sm:block" />,
+      position: 'top-[45%] left-[25%] sm:top-[40%] sm:left-[20%]',
+    },
+    {
+      icon: <FaBrain className="hidden sm:block" />,
+      position: 'top-[45%] right-[25%] sm:top-[40%] sm:right-[20%]',
+    },
+  ]
+
+  // (Baki features ka data waisa hi rahega)
   const featureCategories = {
     'Analytics & Insights': [
       {
@@ -88,9 +105,11 @@ const PowerFullCoreFeature = () => {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // --- Header Animation ---
+      // --- NEW ATTRACTIVE HERO ANIMATION ---
+
+      // 1. Animate Text Content
       gsap.fromTo(
-        '.header-content',
+        '.hero-content',
         { y: 50, opacity: 0 },
         {
           y: 0,
@@ -101,10 +120,40 @@ const PowerFullCoreFeature = () => {
         },
       )
 
-      // --- Feature Categories Animation ---
+      // 2. Animate Floating Icons Entrance
+      gsap.fromTo(
+        '.floating-icon',
+        {
+          scale: 0,
+          opacity: 0,
+        },
+        {
+          scale: 1,
+          opacity: 1,
+          duration: 1.2,
+          ease: 'elastic.out(1, 0.75)',
+          stagger: 0.1,
+          delay: 0.5,
+        },
+      )
+
+      // 3. Add continuous floating animation to icons
+      const icons = document.querySelectorAll('.floating-icon')
+      icons.forEach((icon) => {
+        gsap.to(icon, {
+          y: 'random(-20, 20)',
+          x: 'random(-15, 15)',
+          rotation: 'random(-10, 10)',
+          duration: 'random(4, 8)',
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+        })
+      })
+
+      // --- Feature Categories Animation (Same as before) ---
       const categories = document.querySelectorAll('.feature-category')
       categories.forEach((category) => {
-        // Animate category title
         gsap.fromTo(
           category.querySelector('.category-title'),
           { x: -50, opacity: 0 },
@@ -121,7 +170,6 @@ const PowerFullCoreFeature = () => {
           },
         )
 
-        // Animate feature cards in the category
         gsap.fromTo(
           category.querySelectorAll('.feature-card'),
           { y: 50, opacity: 0, scale: 0.95 },
@@ -141,7 +189,7 @@ const PowerFullCoreFeature = () => {
         )
       })
 
-      // --- CTA Section Animation ---
+      // --- CTA Section Animation (Same as before) ---
       gsap.fromTo(
         '.cta-content',
         { scale: 0.8, opacity: 0 },
@@ -159,7 +207,6 @@ const PowerFullCoreFeature = () => {
       )
     }, componentRef)
 
-    // Cleanup function
     return () => ctx.revert()
   }, [])
 
@@ -168,19 +215,37 @@ const PowerFullCoreFeature = () => {
       ref={componentRef}
       className="bg-[rgb(var(--color-background-dark))] text-[rgb(var(--color-text-primary))] overflow-x-hidden"
     >
-      {/* Header Section */}
-      <section className="pt-28 pb-16 sm:pt-32 sm:pb-20 text-center relative overflow-hidden px-4">
-        <div className="absolute top-0 left-0 w-full h-full bg-grid-slate-800 [mask-image:radial-gradient(ellipse_at_center,white_20%,transparent_80%)]"></div>
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <h1 className="header-content text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tighter">
+      {/* ====== NEW & IMPROVED HERO SECTION ====== */}
+      <section className="relative min-h-screen flex items-center justify-center text-center overflow-hidden px-4">
+        {/* Background Glows and Grids */}
+        <div className="absolute inset-0 z-0 bg-grid-slate-800 [mask-image:radial-gradient(ellipse_at_center,white_10%,transparent_70%)]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vw] sm:w-[50vw] sm:h-[50vw] max-w-[600px] max-h-[600px] bg-[rgb(var(--color-primary-blue))] opacity-10 rounded-full blur-3xl"></div>
+
+        {/* Floating Icons */}
+        <div className="absolute inset-0 z-10">
+          {heroIcons.map((item, index) => (
+            <div
+              key={index}
+              className={`floating-icon absolute ${item.position} w-16 h-16 sm:w-20 sm:h-20 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl flex items-center justify-center`}
+            >
+              <span className="text-3xl sm:text-4xl text-white/80">{item.icon}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Text Content */}
+        <div className="relative z-20 max-w-4xl mx-auto">
+          <h1 className="hero-content text-4xl sm:text-5xl lg:text-7xl font-extrabold tracking-tighter">
             Powerful Core Features
           </h1>
-          <p className="header-content mt-4 text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] max-w-3xl mx-auto">
+          <p className="hero-content mt-6 text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] max-w-3xl mx-auto">
             Vybzz Nations ke wo features jo aapke business ko aage badhane ke liye banaye gaye hain.
             Har tool aapko behtar results dene ke liye design kiya gaya hai.
           </p>
         </div>
       </section>
+
+      {/* ====== Baki Page Waisa Hi Hai ====== */}
 
       {/* Features Grid Section */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
