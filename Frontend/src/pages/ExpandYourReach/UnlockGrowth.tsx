@@ -3,7 +3,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { FaChartLine, FaUsers, FaLightbulb, FaBullseye, FaCogs, FaHandshake } from 'react-icons/fa'
 
-// GSAP ko ScrollTrigger plugin ke saath register karein
+// Register GSAP with ScrollTrigger
 gsap.registerPlugin(ScrollTrigger)
 
 const UnlockGrowth = () => {
@@ -76,7 +76,7 @@ const UnlockGrowth = () => {
               stagger: 0.2,
               scrollTrigger: {
                 trigger: section,
-                start: 'top 80%', // Animation start karein jab section 80% view mein aaye
+                start: 'top 80%',
                 toggleActions: 'play none none none',
               },
             },
@@ -154,37 +154,37 @@ const UnlockGrowth = () => {
       icon: <FaChartLine className="h-10 w-10 text-[rgb(var(--color-primary-cyan))]" />,
       title: 'Data-Driven Strategies',
       description:
-        'Hum market trends aur data analytics ka istemal karke aapke business ke liye targeted growth plans banate hain.',
+        'We use market trends and data analytics to create targeted growth plans for your business.',
     },
     {
       icon: <FaUsers className="h-10 w-10 text-[rgb(var(--color-primary-blue))]" />,
       title: 'Audience Engagement',
       description:
-        'Aapki target audience ko pehchan kar unke saath mazboot rishtey banate hain taaki brand loyalty badhe.',
+        'We identify your target audience and build strong relationships that boost brand loyalty.',
     },
     {
       icon: <FaLightbulb className="h-10 w-10 text-[rgb(var(--color-accent-orange))]" />,
       title: 'Innovative Solutions',
       description:
-        'Creative marketing campaigns aur cutting-edge technology ke zariye hum aapko competition se aage rakhte hain.',
+        'Through creative marketing campaigns and cutting-edge technology, we keep you ahead of the competition.',
     },
     {
       icon: <FaBullseye className="h-10 w-10 text-[rgb(var(--color-accent-pink))]" />,
       title: 'Precision Targeting',
       description:
-        'Sahi audience tak pahunchna zaroori hai. Hum advanced targeting techniques se aapke marketing spend ka ROI maximize karte hain.',
+        'Reaching the right audience is critical. We maximize your ROI with advanced targeting techniques.',
     },
     {
       icon: <FaCogs className="h-10 w-10 text-[rgb(var(--color-primary-cyan))]" />,
       title: 'Process Automation',
       description:
-        'Waqt bachane aur efficiency badhane ke liye hum aapke marketing aur sales processes ko automate karte hain.',
+        'We automate your marketing and sales processes to save time and increase efficiency.',
     },
     {
       icon: <FaHandshake className="h-10 w-10 text-[rgb(var(--color-primary-blue))]" />,
       title: 'Strategic Partnerships',
       description:
-        'Hum aapke brand ko dusre businesses ke saath connect karke naye opportunities aur growth ke raaste kholte hain.',
+        'We connect your brand with other businesses to open new opportunities and paths to growth.',
     },
   ]
 
@@ -208,8 +208,8 @@ const UnlockGrowth = () => {
             <span className="hero-title inline-block">Growth</span>
           </h1>
           <p className="hero-subtitle mt-4 sm:mt-6 text-lg sm:text-xl max-w-2xl mx-auto text-[rgb(var(--color-text-secondary))]">
-            Vybzz Nations aapke business ko data, creativity, aur strategy ke zariye agli bulandiyon
-            tak le jaata hai.
+            Vybzz Nations takes your business to the next level through data, creativity, and
+            strategy.
           </p>
           <a
             href="#contact"
@@ -225,12 +225,12 @@ const UnlockGrowth = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <h2 className="fade-in-up text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
-              Aapki <span className="text-[rgb(var(--color-primary-cyan))]">Growth</span> Ke Liye
-              Hamari Strategies
+              Our Strategies for Your{' '}
+              <span className="text-[rgb(var(--color-primary-cyan))]">Growth</span>
             </h2>
             <p className="fade-in-up mt-4 text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] max-w-3xl mx-auto">
-              Hum sirf marketing nahi karte, hum aapke liye growth engine banate hain. Har strategy
-              aapke unique goals ko achieve karne ke liye design ki jaati hai.
+              We don’t just market — we build growth engines for you. Every strategy is designed to
+              achieve your unique goals.
             </p>
           </div>
 
@@ -258,12 +258,10 @@ const UnlockGrowth = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-20">
             <h2 className="fade-in-up text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
-              Hum <span className="text-[rgb(var(--color-accent-orange))]">Growth</span> Kaise
-              Deliver Karte Hain
+              How We Deliver <span className="text-[rgb(var(--color-accent-orange))]">Growth</span>
             </h2>
             <p className="fade-in-up mt-4 text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] max-w-3xl mx-auto">
-              Ek saaf, transparent, aur result-oriented process jo har qadam par aapke saath hota
-              hai.
+              A clear, transparent, and result-oriented process that supports you at every step.
             </p>
           </div>
           <div className="relative">
@@ -278,7 +276,7 @@ const UnlockGrowth = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Discovery & Research</h3>
                 <p className="text-[rgb(var(--color-text-muted))]">
-                  Aapke business, market, aur goals ko gehrai se samajhna.
+                  Gaining a deep understanding of your business, market, and goals.
                 </p>
               </div>
               {/* Step 2 */}
@@ -288,7 +286,7 @@ const UnlockGrowth = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Strategy & Planning</h3>
                 <p className="text-[rgb(var(--color-text-muted))]">
-                  Data ke basis par ek mazboot aur actionable plan banana.
+                  Building a strong, actionable plan based on data.
                 </p>
               </div>
               {/* Step 3 */}
@@ -298,7 +296,7 @@ const UnlockGrowth = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Execution & Launch</h3>
                 <p className="text-[rgb(var(--color-text-muted))]">
-                  Campaigns ko launch karna aur unhe closely monitor karna.
+                  Launching campaigns and monitoring them closely.
                 </p>
               </div>
               {/* Step 4 */}
@@ -308,7 +306,7 @@ const UnlockGrowth = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Analyze & Optimize</h3>
                 <p className="text-[rgb(var(--color-text-muted))]">
-                  Results ko track karke behtar performance ke liye optimize karna.
+                  Tracking results and optimizing for better performance.
                 </p>
               </div>
             </div>
@@ -326,8 +324,8 @@ const UnlockGrowth = () => {
               Ready to Unlock Your Growth?
             </h2>
             <p className="mt-4 text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] max-w-2xl mx-auto">
-              Aapka business potential limitless hai. Chaliye saath milkar us potential ko haqeeqat
-              mein badalte hain. Ek free consultation ke liye aaj hi humse baat karein.
+              Your business potential is limitless. Let’s work together to turn that potential into
+              reality. Talk to us today for a free consultation.
             </p>
             <a
               href="#"

@@ -111,7 +111,7 @@ const MoreWayToStayClose = () => {
       icon: <FaUsers className="text-4xl md:text-5xl text-[rgb(var(--color-primary-cyan))]" />,
       title: 'Exclusive Community Hub',
       description:
-        'Hamare private community forums aur discussion groups join karein. Apne jaise Vybzz fans se connect hon aur behind-the-scenes content share karein.',
+        'Join our private community forums and discussion groups. Connect with fellow Vybzz fans and share behind-the-scenes content.',
     },
     {
       icon: (
@@ -119,19 +119,19 @@ const MoreWayToStayClose = () => {
       ),
       title: 'Interactive Live Events',
       description:
-        'Exclusive live streams, Q&A sessions, aur virtual meet-and-greets mein hissa lein. Apne favorite creators se real-time mein interact karein.',
+        'Join exclusive live streams, Q&A sessions, and virtual meet-and-greets. Interact with your favorite creators in real time.',
     },
     {
       icon: <FaComments className="text-4xl md:text-5xl text-[rgb(var(--color-accent-pink))]" />,
       title: 'Direct Messaging & AMAs',
       description:
-        "Creators ko direct messages bhejein aur 'Ask Me Anything' (AMA) sessions mein apne sawalon ke jawab payein. Unke aur kareeb aayein.",
+        "Send direct messages to creators and get answers in 'Ask Me Anything' (AMA) sessions. Get even closer to them.",
     },
     {
       icon: <FaStar className="text-4xl md:text-5xl text-[rgb(var(--color-accent-orange))]" />,
       title: 'Get Loyalty Rewards',
       description:
-        'Ek loyal fan hone ke liye points aur rewards jeetein. Aapka support Vybzz Nations mein value rakhta hai aur hum use recognize karte hain.',
+        'Earn points and rewards for being a loyal fan. Your support matters at Vybzz Nations—and we recognize it.',
     },
   ]
 
@@ -140,40 +140,40 @@ const MoreWayToStayClose = () => {
       icon: <FaSignInAlt />,
       title: 'Sign Up & Join',
       description:
-        'Vybzz Nations par apna account banayein aur apne pasand ke creator ki nation join karein.',
+        'Create your account on Vybzz Nations and join the nation of your favorite creator.',
     },
     {
       icon: <FaUserPlus />,
       title: 'Choose Your Tier',
       description:
-        'Apne budget aur pasand ke hisab se membership tier chunein aur exclusive benefits unlock karein.',
+        'Pick a membership tier that fits your budget and preferences to unlock exclusive benefits.',
     },
     {
       icon: <FaRocket />,
       title: 'Engage & Enjoy',
       description:
-        'Community se judein, events mein hissa lein, aur apne creator ke kareeb aane ka anand lein.',
+        'Connect with the community, join events, and enjoy getting closer to your creator.',
     },
   ]
 
   const testimonials = [
     {
       quote:
-        'Vybzz Nations ne mujhe mere favorite gamer se connect hone ka mauka diya hai. Live streams aur community events amazing hain!',
+        'Vybzz Nations gave me a way to connect with my favorite gamer. The live streams and community events are amazing!',
       name: 'Rohan Sharma',
       handle: '@GamerProRohan',
       avatar: 'RS',
     },
     {
       quote:
-        'Ek artist ke exclusive content tak pahunchna itna aasan pehle kabhi nahi tha. Main har mahine naye tutorials ka intezar karti hoon.',
+        'Getting access to an artist’s exclusive content has never been this easy. I look forward to new tutorials every month.',
       name: 'Priya Singh',
       handle: '@ArtisticPriya',
       avatar: 'PS',
     },
     {
       quote:
-        "The community is so positive and engaging. It's not just about the creator, it's about the amazing fans you meet.",
+        "The community is so positive and engaging. It's not just about the creator—it's about the amazing fans you meet.",
       name: 'Aakash Verma',
       handle: '@TechieAakash',
       avatar: 'AV',
@@ -202,8 +202,8 @@ const MoreWayToStayClose = () => {
             </span>
           </h1>
           <p className="sub-heading text-lg md:text-xl text-[rgb(var(--color-text-secondary))] max-w-3xl mx-auto">
-            Vybzz Nations aapko aapke favorite creators ke saath gehre level par judne ke anokhe
-            mauke deta hai. Sirf content nahi, ek experience paayein.
+            Vybzz Nations gives you unique ways to connect with your favorite creators on a deeper
+            level. Not just content—an experience.
           </p>
         </header>
 
@@ -233,11 +233,9 @@ const MoreWayToStayClose = () => {
 
         {/* --- NEW SECTION: How It Works --- */}
         <section className="content-section text-center mb-24 md:mb-32">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Teen Aasan Steps Mein Shuru Karein
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Get Started in Three Easy Steps</h2>
           <p className="text-lg text-[rgb(var(--color-text-muted))] mb-16 max-w-2xl mx-auto">
-            Community join karna tez aur aasan hai. Bas in steps ko follow karein.
+            Joining the community is quick and simple. Just follow these steps.
           </p>
           <div className="how-it-works-container relative grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4">
             {/* Dashed line for desktop view */}
@@ -279,7 +277,7 @@ const MoreWayToStayClose = () => {
               Voices of the <span className="text-[rgb(var(--color-primary-blue))]">Nation</span>
             </h2>
             <p className="text-lg text-[rgb(var(--color-text-muted))] max-w-2xl mx-auto">
-              Suniye hamare community members kya kehte hain.
+              Hear what our community members are saying.
             </p>
           </div>
           <div className="testimonials-grid grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -315,7 +313,7 @@ const MoreWayToStayClose = () => {
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(var(--color-primary-blue),0.15)_0%,_rgba(var(--color-surface-1),0)_50%)]"></div>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Dive Deeper?</h2>
           <p className="text-lg text-[rgb(var(--color-text-muted))] mb-8 max-w-2xl mx-auto">
-            Vybzz Nations community ka hissa banein aur aaj hi exclusive benefits unlock karein.
+            Become a part of the Vybzz Nations community and unlock exclusive benefits today.
           </p>
           <button className="bg-gradient-to-r from-[rgb(var(--color-primary-cyan))] to-[rgb(var(--color-primary-blue))] text-white font-bold py-4 px-10 rounded-full text-lg transition-all duration-300 transform hover:scale-110 hover:shadow-xl hover:shadow-[rgb(var(--color-primary-cyan)/0.3)] focus:outline-none focus:ring-4 focus:ring-[rgb(var(--color-primary-cyan)/0.5)]">
             Join The Nation

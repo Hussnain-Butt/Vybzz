@@ -101,8 +101,8 @@ const Audience = () => {
                 <span className="font-medium text-sm">CSV</span>
               </button>
             </div>
-            <div className="gsap-filters flex justify-between items-center mb-5">
-              <div className="flex items-center gap-4">
+            <div className="gsap-filters flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <button className="flex items-center gap-2 px-4 py-2 bg-[rgb(var(--color-surface-2))] rounded-lg hover:bg-[rgb(var(--color-surface-3))] transition-colors">
                   <SlidersHorizontal size={16} />
                   <span className="font-medium text-sm">Filters</span>

@@ -1,4 +1,3 @@
-// src/components/dashboard/Sidebar.tsx
 import React, { useState, useLayoutEffect, useRef, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { gsap } from 'gsap'
@@ -14,6 +13,7 @@ import {
   LuPlus,
   LuPanelLeftClose,
   LuPanelLeftOpen,
+  LuX, // ✅ Mobile close icon ke liye
 } from 'react-icons/lu'
 import { FaChartBar } from 'react-icons/fa'
 import { FiMoreHorizontal } from 'react-icons/fi'
@@ -38,12 +38,20 @@ const sidebarNavItems: Item[] = [
   { name: 'Settings', path: '/dashboard/settings', Icon: LuSettings },
 ]
 
+// ✅ Props ko update kiya
 interface SidebarProps {
   isCollapsed: boolean
   setCollapsed: (collapsed: boolean) => void
+  isMobileOpen: boolean
+  setMobileOpen: (open: boolean) => void
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isCollapsed,
+  setCollapsed,
+  isMobileOpen,
+  setMobileOpen,
+}) => {
   const [isMenuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
   const sidebarRef = useRef<HTMLElement>(null)
@@ -51,12 +59,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
   const liRefs = useRef<(HTMLLIElement | null)[]>([])
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
-  // close menu when collapsing
   useEffect(() => {
     if (isCollapsed) setMenuOpen(false)
   }, [isCollapsed])
 
-  // Animate active link indicator (visible only when expanded)
   useLayoutEffect(() => {
     const activeLi = liRefs.current.find((li) =>
       li?.querySelector('a')?.classList.contains('sb-active'),
@@ -72,24 +78,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
     } else if (indicatorRef.current) {
       gsap.to(indicatorRef.current, { opacity: 0, duration: 0.3 })
     }
-  }, [location.pathname, isCollapsed])
+  }, [location.pathname, isCollapsed, isMobileOpen]) // isMobileOpen add kiya
 
+  // ✅ Mobile par link click karne par sidebar band ho jayega
   const handleLinkClick = () => {
-    if (window.innerWidth < 768) setCollapsed(true)
+    setMobileOpen(false)
   }
 
   return (
     <aside
       ref={sidebarRef}
-      className={`h-screen bg-[rgb(var(--color-surface-1))] border-r border-[rgb(var(--color-surface-2))] flex flex-col transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'w-20' : 'w-64'}`}
+      className={`
+        flex h-screen flex-col bg-[rgb(var(--color-surface-1))] border-r border-[rgb(var(--color-surface-2))] transition-transform duration-300 ease-in-out
+        
+        // ✅ Mobile View (Default): Fixed, off-screen, z-index upar
+        fixed inset-y-0 left-0 z-40 w-64 transform 
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+
+        // ✅ Desktop View (md se upar): Relative, on-screen, width change hoga
+        md:relative md:translate-x-0 md:transition-all
+        ${isCollapsed ? 'md:w-20' : 'md:w-64'}
+      `}
     >
-      {/* Header — logo shows only when expanded */}
+      {/* Header */}
       <div
         className={`flex items-center transition-all duration-300 ${
           isCollapsed ? 'justify-center px-2 pt-3 pb-2' : 'justify-between px-3 py-3'
         }`}
       >
+        {/* ✅ Logo & Title (ab !isCollapsed se control hoga) */}
         {!isCollapsed && (
           <div className="flex items-center gap-2 min-w-0">
             <img
@@ -102,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
           </div>
         )}
 
-        {/* Collapse button (when expanded) */}
+        {/* ✅ Desktop Collapse button */}
         <button
           onClick={() => setCollapsed(!isCollapsed)}
           className={`${
@@ -113,7 +130,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
           <LuPanelLeftClose size={20} />
         </button>
 
-        {/* Expand button (when collapsed) — centered square like other items */}
+        {/* ✅ Desktop Expand button */}
         {isCollapsed && (
           <button
             onClick={() => setCollapsed(false)}
@@ -123,11 +140,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
             <LuPanelLeftOpen size={20} />
           </button>
         )}
+
+        {/* ✅ Mobile Close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="absolute top-3 right-3 grid md:hidden h-10 w-10 place-items-center rounded-full hover:bg-[rgb(var(--color-surface-2))] text-[rgb(var(--color-text-secondary))]"
+          aria-label="Close sidebar"
+        >
+          <LuX size={24} />
+        </button>
       </div>
 
-      {/* Scroll area — stable gutter prevents layout jump on scrollbar appearance */}
+      {/* Scroll area */}
       <nav
-        className="relative flex-1 overflow-hidden custom-scrollbar min-h-0 overscroll-contain"
+        className="relative flex-1 overflow-y-auto custom-scrollbar min-h-0 overscroll-contain"
         style={{ scrollbarGutter: 'stable both-edges' as any }}
       >
         <div
@@ -158,17 +184,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
                   const state = isActive
                     ? 'sb-active bg-[rgb(var(--color-surface-2))] text-white'
                     : 'text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] hover:text-white'
-                  return `${base} ${isCollapsed ? collapsed : expanded} ${state}`
+                  // Mobile par hamesha expanded style rahega
+                  return `${base} ${isCollapsed ? `md:${collapsed}` : expanded} ${state}`
                 }}
               >
                 <item.Icon
                   className={`text-xl shrink-0 transition-transform duration-200 ${
-                    isCollapsed ? 'group-hover:scale-110' : ''
+                    isCollapsed ? 'group-hover:md:scale-110' : ''
                   }`}
                 />
                 <span
                   className={`text-[15px] font-medium tracking-wide transition-all duration-200 whitespace-nowrap ${
-                    isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+                    isCollapsed ? 'md:opacity-0 md:w-0' : 'opacity-100'
                   }`}
                 >
                   {item.name}
@@ -181,19 +208,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
 
       {/* Footer */}
       <div className="px-3 pb-4 pt-2 space-y-3">
-        {/* Create button — circular when collapsed, full-width when expanded */}
+        {/* Create button */}
         <button
           className={`${
             isCollapsed
-              ? 'mx-auto grid place-items-center w-12 h-12 rounded-2xl'
+              ? 'mx-auto grid place-items-center w-12 h-12 rounded-2xl md:mx-auto'
               : 'w-full inline-flex items-center justify-center gap-2 rounded-2xl py-3'
           } font-semibold shadow-md hover:shadow-lg transition-all duration-300 bg-white text-black hover:bg-gray-200`}
         >
           <LuPlus className={`${isCollapsed ? 'text-xl' : 'text-base'} shrink-0`} />
-          <span className={`${isCollapsed ? 'sr-only' : 'opacity-100'}`}>Create</span>
+          <span
+            className={`${isCollapsed ? 'sr-only md:not-sr-only md:opacity-0' : 'opacity-100'}`}
+          >
+            Create
+          </span>
         </button>
 
-        {/* Profile card — relative so the absolute menu can anchor correctly */}
+        {/* Profile card */}
         <div
           className={`relative transition-colors ${
             isCollapsed
@@ -201,27 +232,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) => {
               : 'flex items-center gap-3 rounded-2xl p-2.5 bg-[rgb(var(--color-surface-2))] border border-[rgb(var(--color-surface-3))]'
           }`}
         >
-          {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-[rgb(var(--color-accent-orange))] grid place-items-center text-white font-bold shrink-0">
             M
           </div>
 
-          {/* Details hidden when collapsed */}
           <div
             className={`min-w-0 flex-1 transition-all duration-200 ${
-              isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+              isCollapsed ? 'opacity-0 w-0 md:opacity-0 md:w-0' : 'opacity-100'
             }`}
           >
             <div className="text-sm font-semibold text-white truncate">Muhammad H...</div>
             <div className="text-xs text-[rgb(var(--color-text-muted))]">Creator</div>
           </div>
 
-          {/* Menu button */}
           <button
             ref={menuButtonRef}
             onClick={() => setMenuOpen((s) => !s)}
             className={`p-1.5 rounded-lg hover:bg-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-secondary))] hover:text-white transition-all duration-200 ${
-              isCollapsed ? 'opacity-0 w-0' : 'opacity-100 ml-auto'
+              isCollapsed ? 'opacity-0 w-0 md:opacity-0 md:w-0' : 'opacity-100 ml-auto'
             }`}
             aria-label="Open profile menu"
             aria-haspopup="menu"
