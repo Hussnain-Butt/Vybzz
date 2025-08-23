@@ -18,8 +18,7 @@ const SsoCallbackPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Clerk callback (renders nothing, just completes the session) */}
-      <AuthenticateWithRedirectCallback redirectUrlComplete="/member/home" />
+      <AuthenticateWithRedirectCallback />
     </div>
   )
 }
