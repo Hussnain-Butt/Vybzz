@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const menuLinks = [
   'News',
@@ -104,7 +105,9 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, buttonRef })
         {/* Logout Section */}
         <div className="my-1 border-t border-[rgb(var(--color-surface-3))]"></div>
         <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-red-400 hover:bg-[rgb(var(--color-surface-3))]">
-          <LogOut size={16} /> Log out
+          <Link to="/" className="flex align-items-center justify-content-center gap-5">
+            <LogOut size={16} /> Log out
+          </Link>
         </button>
       </div>
     </div>

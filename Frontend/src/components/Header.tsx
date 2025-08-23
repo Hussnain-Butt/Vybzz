@@ -425,7 +425,7 @@ const Header: React.FC = () => {
                 Log in
               </Link>
               <Link
-                to="#"
+                to="/login"
                 className="bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-semibold px-5 py-2.5 rounded-full hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transform transition-all duration-300"
               >
                 Get Started
@@ -524,7 +524,7 @@ const Header: React.FC = () => {
                 </Link>
                 {/* === FIX START: Changed <a> to Link component === */}
                 <Link
-                  to="#"
+                  to="/login"
                   onClick={() => setIsMenuOpen(false)}
                   className="mobile-menu-item w-full text-center bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-semibold px-5 py-3 rounded-full"
                 >

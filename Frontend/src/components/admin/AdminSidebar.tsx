@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { gsap } from 'gsap'
 import {
   LuLayoutDashboard,
@@ -130,13 +130,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isCollapsed, setCollapsed }
           `}
         >
           <LuLogOut className="text-2xl shrink-0" />
-          <span
-            className={`font-medium whitespace-nowrap transition-opacity duration-200 ${
-              isCollapsed ? 'opacity-0' : 'opacity-100'
-            }`}
-          >
-            Logout
-          </span>
+          <Link to="/">
+            <span
+              className={`font-medium whitespace-nowrap transition-opacity duration-200 ${
+                isCollapsed ? 'opacity-0' : 'opacity-100'
+              }`}
+            >
+              Logout
+            </span>
+          </Link>
         </button>
       </div>
     </aside>

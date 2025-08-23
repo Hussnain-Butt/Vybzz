@@ -154,20 +154,20 @@ const BringInNewFans = () => {
         </div>
         <div className="absolute bottom-0 w-full h-1/3 transform-style-3d flex justify-center items-end gap-4">
           <FanCard
-            name="Aarav"
-            location="Mumbai"
+            name="James"
+            location="New York"
             icon={<FiMusic />}
             className="fan-card rotate-[-10deg] translate-x-[-50%] mb-12"
           />
           <FanCard
-            name="Priya"
-            location="Delhi"
+            name="John"
+            location="Canada"
             icon={<FiFilm />}
             className="fan-card z-10 mb-20"
           />
           <FanCard
-            name="Rohan"
-            location="Bangalore"
+            name="Mark"
+            location="Thailand"
             icon={<FiUsers />}
             className="fan-card rotate-[12deg] translate-x-[50%] mb-8"
           />

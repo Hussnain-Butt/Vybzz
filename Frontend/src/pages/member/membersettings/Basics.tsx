@@ -116,7 +116,7 @@ const Basics = () => {
                   <input
                     type="text"
                     id="displayName"
-                    defaultValue="tools"
+                    defaultValue="user name"
                     className="w-full bg-[rgb(var(--color-surface-2))] border-2 border-transparent focus:border-[rgb(var(--color-primary-cyan))] rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-0 transition-all duration-300"
                   />
                 </div>
@@ -131,7 +131,7 @@ const Basics = () => {
                   <input
                     type="email"
                     id="email"
-                    defaultValue="tools8591@gmail.com"
+                    defaultValue="useremail"
                     className="w-full bg-[rgb(var(--color-surface-2))] border-2 border-transparent focus:border-[rgb(var(--color-primary-cyan))] rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-0 transition-all duration-300"
                   />
                 </div>
@@ -150,8 +150,8 @@ const Basics = () => {
                       backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                     }}
                   >
-                    <option className="bg-[rgb(var(--color-surface-1))]">Pakistan</option>
                     <option className="bg-[rgb(var(--color-surface-1))]">United States</option>
+                    <option className="bg-[rgb(var(--color-surface-1))]">Pakistan</option>
                     <option className="bg-[rgb(var(--color-surface-1))]">Canada</option>
                     <option className="bg-[rgb(var(--color-surface-1))]">United Kingdom</option>
                   </select>
