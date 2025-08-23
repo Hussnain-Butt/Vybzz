@@ -400,11 +400,7 @@ const Header: React.FC = () => {
                   >
                     <Link
                       to={item.href || '#'}
-                      className={`transition-colors duration-300 ${
-                        item.highlight
-                          ? 'text-cyan-300 font-semibold'
-                          : 'text-slate-200 group-hover:text-white font-medium'
-                      }`}
+                      className={`transition-colors duration-300 text-slate-200 group-hover:text-white font-medium`}
                     >
                       {item.label}
                     </Link>
@@ -456,11 +452,9 @@ const Header: React.FC = () => {
                         onClick={() =>
                           setOpenMobileDropdown((prev) => (prev === item.key ? null : item.key))
                         }
-                        className={`w-full flex justify-between items-center px-4 py-3 text-left font-semibold transition-all duration-200 ${
-                          item.highlight
-                            ? 'bg-blue-500/20 text-cyan-300'
-                            : 'text-white hover:bg-blue-500/10'
-                        } ${openMobileDropdown === item.key ? 'bg-blue-500/10' : ''}`}
+                        className={`w-full flex justify-between items-center px-4 py-3 text-left font-semibold transition-all duration-200 text-white hover:bg-blue-500/10 ${
+                          openMobileDropdown === item.key ? 'bg-blue-500/10' : ''
+                        }`}
                       >
                         <span>{item.label}</span>
                         <ChevronDown
@@ -504,9 +498,7 @@ const Header: React.FC = () => {
                   ) : (
                     <Link
                       to={item.href || '#'}
-                      className={`block px-4 py-3 rounded-lg text-white font-semibold transition-all duration-200 ${
-                        item.highlight ? 'bg-blue-500/20 text-cyan-300' : 'hover:bg-blue-500/10'
-                      }`}
+                      className={`block px-4 py-3 rounded-lg text-white font-semibold transition-all duration-200 hover:bg-blue-500/10`}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {item.label}
@@ -522,20 +514,23 @@ const Header: React.FC = () => {
                   <Search className="w-5 h-5" />
                   <span>Search</span>
                 </Button>
+                {/* === FIX START: Changed to Link component with correct path === */}
                 <Link
-                  to="#"
+                  to="/login"
                   onClick={() => setIsMenuOpen(false)}
                   className="mobile-menu-item w-full text-center text-slate-200 font-medium px-4 py-3 hover:bg-blue-500/10 rounded-full"
                 >
                   Log in
                 </Link>
-                <a
-                  href="#"
+                {/* === FIX START: Changed <a> to Link component === */}
+                <Link
+                  to="#"
                   onClick={() => setIsMenuOpen(false)}
                   className="mobile-menu-item w-full text-center bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-semibold px-5 py-3 rounded-full"
                 >
                   Get Started
-                </a>
+                </Link>
+                {/* === FIX END === */}
               </div>
             </div>
           </div>

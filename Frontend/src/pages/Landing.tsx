@@ -12,7 +12,6 @@ import TestimonialQuote from '../components/TestimonialQuote'
 const Landing: React.FC = () => {
   return (
     <div className="min-h-screen">
-      <Header />
       <Hero />
       <CreativitySection />
       <CreativeControlSection />
@@ -20,7 +19,6 @@ const Landing: React.FC = () => {
       <Features />
       <Testimonials />
       <CTA />
-      <Footer />
     </div>
   )
 }

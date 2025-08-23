@@ -103,7 +103,7 @@ const StatCard: React.FC<{
       ref={cardRef}
       className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 flex items-center gap-4 shadow-sm"
     >
-      <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-surface-3))]">
+      <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-surface-3))] shrink-0">
         <Icon className="text-[rgb(var(--color-text-primary))] text-xl" />
       </div>
       <div className="min-w-0">
@@ -145,12 +145,12 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
   }
 
   return (
-    <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
         <div className="text-lg font-semibold text-[rgb(var(--color-text-primary))]">
           Your collections
         </div>
-        <button className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow">
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow w-full sm:w-auto">
           <LuPlus /> New collection
         </button>
       </div>
@@ -164,10 +164,10 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
             <div className="h-28 w-full bg-[rgb(var(--color-surface-3))]" />
             <div className="p-4">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-md grid place-items-center bg-[rgb(var(--color-surface-3))] text-sm font-semibold">
+                <div className="w-10 h-10 rounded-md grid place-items-center bg-[rgb(var(--color-surface-3))] text-sm font-semibold shrink-0">
                   {c.title.charAt(0).toUpperCase()}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-grow">
                   <div className="font-medium text-[rgb(var(--color-text-primary))] truncate">
                     {c.title}
                   </div>
@@ -177,7 +177,7 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
                 </div>
                 <button
                   onClick={() => toggle(c.id)}
-                  className="ml-auto rounded-lg border border-[rgb(var(--color-surface-3))] px-2 py-1 text-xs text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] transition"
+                  className="ml-auto rounded-lg border border-[rgb(var(--color-surface-3))] px-2 py-1 text-xs text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] transition shrink-0"
                 >
                   {expandedId === c.id ? 'Hide' : 'View'}
                 </button>
@@ -191,7 +191,7 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
                       key={i}
                       className="flex items-center gap-3 rounded-xl border border-[rgb(var(--color-surface-3))] p-3 hover:bg-[rgb(var(--color-surface-2))] transition"
                     >
-                      <div className="w-10 h-10 rounded-md bg-[rgb(var(--color-surface-3))] grid place-items-center">
+                      <div className="w-10 h-10 rounded-md bg-[rgb(var(--color-surface-3))] grid place-items-center shrink-0">
                         <FaPlayCircle />
                       </div>
                       <div className="min-w-0">
@@ -291,16 +291,16 @@ const DashboardHome: React.FC = () => {
       {/* STATUS BAR */}
       <div
         ref={statusBarRef}
-        className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] px-4 py-3 flex items-center gap-3"
+        className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
       >
-        <div className="text-sm text-[rgb(var(--color-text-secondary))]">
+        <div className="text-sm text-center sm:text-left text-[rgb(var(--color-text-secondary))]">
           <span className="text-[rgb(var(--color-text-primary))] font-medium">
             Your page is not yet published
           </span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch gap-2">
           <button
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-text-primary))] bg-[rgb(var(--color-surface-3))] hover:bg-[rgb(var(--color-surface-3))]/90 transition"
+            className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-text-primary))] bg-[rgb(var(--color-surface-3))] hover:bg-[rgb(var(--color-surface-3))]/90 transition"
             onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
             onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
           >
@@ -308,7 +308,7 @@ const DashboardHome: React.FC = () => {
             Preview page
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
+            className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
             onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
             onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
           >
@@ -331,7 +331,7 @@ const DashboardHome: React.FC = () => {
           }}
         />
 
-        <div className="px-6 pb-5 pt-4 bg-[rgb(var(--color-surface-1))] flex flex-wrap items-center gap-4">
+        <div className="px-4 sm:px-6 pb-5 pt-4 bg-[rgb(var(--color-surface-1))] flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-x-6 gap-y-4">
           <div className="-mt-12">
             <div
               className="w-20 h-20 rounded-2xl grid place-items-center text-3xl font-bold text-white shadow-lg"
@@ -348,31 +348,31 @@ const DashboardHome: React.FC = () => {
             <div className="text-2xl font-semibold text-[rgb(var(--color-text-primary))]">
               Muhammad Hussain
             </div>
-            <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-muted))]">
-              <LuLink />
+            <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-muted))] break-all">
+              <LuLink className="shrink-0" />
               patreon.com/MuhammadHussain415
             </div>
           </div>
 
-          <div className="flex-1" />
+          <div className="hidden md:block flex-1" />
 
-          <div className="flex items-center gap-2">
+          <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch md:items-center gap-2">
             <button
-              className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
               onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
               onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
             >
               <LuEye /> Preview
             </button>
             <button
-              className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
               onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
               onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
             >
               <LuShare2 /> Share
             </button>
             <button
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 bg-[rgb(var(--color-primary-blue))] text-white hover:bg-[rgb(var(--color-accent-pink))] transition shadow"
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-[rgb(var(--color-primary-blue))] text-white hover:bg-[rgb(var(--color-accent-pink))] transition shadow"
               onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
               onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
             >
@@ -382,7 +382,7 @@ const DashboardHome: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div ref={tabsRef} className="px-6 pb-4 pt-2">
+        <div ref={tabsRef} className="px-4 sm:px-6 pb-4 pt-2 overflow-x-auto">
           <div className="relative inline-flex items-center gap-2 rounded-full bg-[rgb(var(--color-surface-2))] p-1 border border-[rgb(var(--color-surface-3))]">
             <div
               className="tab-indicator absolute inset-y-1 rounded-full bg-[rgb(var(--color-surface-3))] opacity-0 pointer-events-none"
@@ -393,7 +393,7 @@ const DashboardHome: React.FC = () => {
                 key={t}
                 data-tab={t}
                 onClick={() => setActiveTab(t)}
-                className={`relative z-10 rounded-full px-4 py-2 text-sm leading-none transition ${
+                className={`relative z-10 rounded-full px-4 py-2 text-sm leading-none transition whitespace-nowrap ${
                   activeTab === t
                     ? 'text-[rgb(var(--color-text-primary))]'
                     : 'text-[rgb(var(--color-text-secondary))] hover:text-[rgb(var(--color-text-primary))]'
@@ -430,8 +430,8 @@ const DashboardHome: React.FC = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5 flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-primary-blue))]/15">
+            <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 text-center lg:text-left">
+              <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-primary-blue))]/15 shrink-0 mx-auto lg:mx-0">
                 <LuSparkles className="text-[rgb(var(--color-primary-blue))]" />
               </div>
               <div className="min-w-0">
@@ -443,9 +443,9 @@ const DashboardHome: React.FC = () => {
                   recurring income.
                 </div>
               </div>
-              <div className="flex-1" />
+              <div className="hidden lg:block flex-1" />
               <button
-                className="rounded-xl px-3.5 py-2.5 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
+                className="rounded-xl px-3.5 py-2.5 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow w-full lg:w-auto"
                 onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
                 onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
               >
@@ -458,7 +458,7 @@ const DashboardHome: React.FC = () => {
             ref={checklistRef}
             className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5"
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div className="text-lg font-semibold text-[rgb(var(--color-text-primary))]">
                 Welcome checklist
               </div>
@@ -472,7 +472,7 @@ const DashboardHome: React.FC = () => {
               <ChecklistItem>Promote your page</ChecklistItem>
             </div>
             <button
-              className="mt-5 inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
+              className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
               onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
               onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
             >

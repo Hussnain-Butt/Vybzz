@@ -17,13 +17,13 @@ import {
   FaBrain,
 } from 'react-icons/fa'
 
-// GSAP ko ScrollTrigger plugin ke saath register karein
+// Register GSAP with ScrollTrigger
 gsap.registerPlugin(ScrollTrigger)
 
 const PowerFullCoreFeature = () => {
   const componentRef = useRef(null)
 
-  // Hero section mein dikhane ke liye icons
+  // Hero section icons
   const heroIcons = [
     { icon: <FaChartPie />, position: 'top-[15%] left-[10%] sm:top-[20%] sm:left-[15%]' },
     { icon: <FaRocket />, position: 'top-[15%] right-[10%] sm:top-[20%] sm:right-[15%]' },
@@ -39,26 +39,26 @@ const PowerFullCoreFeature = () => {
     },
   ]
 
-  // (Baki features ka data waisa hi rahega)
+  // Feature categories
   const featureCategories = {
     'Analytics & Insights': [
       {
         icon: <FaChartPie className="h-8 w-8 text-[rgb(var(--color-primary-cyan))]" />,
         title: 'Advanced Analytics',
         description:
-          'Real-time data aur deep insights se apni performance ko track karein aur behtar business decisions lein.',
+          'Track your performance with real-time data and deep insights to make better business decisions.',
       },
       {
         icon: <FaUsers className="h-8 w-8 text-[rgb(var(--color-primary-cyan))]" />,
         title: 'Audience Segmentation',
         description:
-          'Apni audience ko unke behavior, demographics, aur interests ke base par segment karke personalized campaigns chalayein.',
+          'Segment your audience based on their behavior, demographics, and interests to run personalized campaigns.',
       },
       {
         icon: <FaBrain className="h-8 w-8 text-[rgb(var(--color-primary-cyan))]" />,
         title: 'AI-Powered Predictions',
         description:
-          'Artificial Intelligence ka istemal karke future trends aur customer behavior ko predict karein taaki aap hamesha aage rahein.',
+          'Leverage artificial intelligence to predict future trends and customer behavior so you always stay ahead.',
       },
     ],
     'Automation & Tools': [
@@ -66,19 +66,19 @@ const PowerFullCoreFeature = () => {
         icon: <FaCogs className="h-8 w-8 text-[rgb(var(--color-accent-orange))]" />,
         title: 'Workflow Automation',
         description:
-          'Repetitive marketing tasks ko automate karein taaki aapka waqt bache aur aap strategy par focus kar sakein.',
+          'Automate repetitive marketing tasks to save time and let your team focus on strategy.',
       },
       {
         icon: <FaRocket className="h-8 w-8 text-[rgb(var(--color-accent-orange))]" />,
         title: 'Multi-Channel Campaigns',
         description:
-          'Email, social media, aur doosre channels par campaigns ko ek hi dashboard se manage aur launch karein.',
+          'Manage and launch campaigns across email, social media, and other channels from a single dashboard.',
       },
       {
         icon: <FaShareAlt className="h-8 w-8 text-[rgb(var(--color-accent-orange))]" />,
         title: 'Social Media Integration',
         description:
-          'Apne saare social media accounts ko connect karke content schedule karein aur engagement ko track karein.',
+          'Connect all your social media accounts to schedule content and track engagement easily.',
       },
     ],
     'Platform & Support': [
@@ -86,28 +86,26 @@ const PowerFullCoreFeature = () => {
         icon: <FaShieldAlt className="h-8 w-8 text-[rgb(var(--color-primary-blue))]" />,
         title: 'Enterprise-Grade Security',
         description:
-          'Aapka data hamare paas mehfooz hai. Hum top-level security protocols ka istemal karte hain.',
+          'Your data is always safe with us. We use top-level security protocols to protect it.',
       },
       {
         icon: <FaPaintBrush className="h-8 w-8 text-[rgb(var(--color-primary-blue))]" />,
         title: 'Full Customization',
         description:
-          'Platform ko apni brand identity ke mutabik customize karein, jisse aapko ek consistent look and feel milti hai.',
+          'Customize the platform to match your brand identity, giving you a consistent look and feel.',
       },
       {
         icon: <FaHeadset className="h-8 w-8 text-[rgb(var(--color-primary-blue))]" />,
         title: '24/7 Priority Support',
         description:
-          'Hamari expert support team aapki madad ke liye hamesha taiyar hai, jab bhi aapko zaroorat ho.',
+          'Our expert support team is always available to assist you whenever you need help.',
       },
     ],
   }
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // --- NEW ATTRACTIVE HERO ANIMATION ---
-
-      // 1. Animate Text Content
+      // Hero text animation
       gsap.fromTo(
         '.hero-content',
         { y: 50, opacity: 0 },
@@ -120,7 +118,7 @@ const PowerFullCoreFeature = () => {
         },
       )
 
-      // 2. Animate Floating Icons Entrance
+      // Floating icons entrance
       gsap.fromTo(
         '.floating-icon',
         {
@@ -137,7 +135,7 @@ const PowerFullCoreFeature = () => {
         },
       )
 
-      // 3. Add continuous floating animation to icons
+      // Continuous floating animation for icons
       const icons = document.querySelectorAll('.floating-icon')
       icons.forEach((icon) => {
         gsap.to(icon, {
@@ -151,7 +149,7 @@ const PowerFullCoreFeature = () => {
         })
       })
 
-      // --- Feature Categories Animation (Same as before) ---
+      // Animate feature categories
       const categories = document.querySelectorAll('.feature-category')
       categories.forEach((category) => {
         gsap.fromTo(
@@ -189,7 +187,7 @@ const PowerFullCoreFeature = () => {
         )
       })
 
-      // --- CTA Section Animation (Same as before) ---
+      // CTA section animation
       gsap.fromTo(
         '.cta-content',
         { scale: 0.8, opacity: 0 },
@@ -215,9 +213,9 @@ const PowerFullCoreFeature = () => {
       ref={componentRef}
       className="bg-[rgb(var(--color-background-dark))] text-[rgb(var(--color-text-primary))] overflow-x-hidden"
     >
-      {/* ====== NEW & IMPROVED HERO SECTION ====== */}
+      {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center text-center overflow-hidden px-4">
-        {/* Background Glows and Grids */}
+        {/* Background */}
         <div className="absolute inset-0 z-0 bg-grid-slate-800 [mask-image:radial-gradient(ellipse_at_center,white_10%,transparent_70%)]"></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vw] sm:w-[50vw] sm:h-[50vw] max-w-[600px] max-h-[600px] bg-[rgb(var(--color-primary-blue))] opacity-10 rounded-full blur-3xl"></div>
 
@@ -239,13 +237,11 @@ const PowerFullCoreFeature = () => {
             Powerful Core Features
           </h1>
           <p className="hero-content mt-6 text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] max-w-3xl mx-auto">
-            Vybzz Nations ke wo features jo aapke business ko aage badhane ke liye banaye gaye hain.
-            Har tool aapko behtar results dene ke liye design kiya gaya hai.
+            The features of Vybzz Nations are designed to help grow your business. Each tool is
+            crafted to deliver better results for you.
           </p>
         </div>
       </section>
-
-      {/* ====== Baki Page Waisa Hi Hai ====== */}
 
       {/* Features Grid Section */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
@@ -281,12 +277,12 @@ const PowerFullCoreFeature = () => {
         <div className="max-w-4xl mx-auto text-center">
           <div className="cta-content">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
-              Sab Kuch Jo Aapko{' '}
-              <span className="text-[rgb(var(--color-primary-cyan))]">Growth</span> Ke Liye Chahiye
+              Everything You Need For{' '}
+              <span className="text-[rgb(var(--color-primary-cyan))]">Growth</span>
             </h2>
             <p className="mt-4 text-lg sm:text-xl text-[rgb(var(--color-text-secondary))] max-w-2xl mx-auto">
-              Hamare plans aapki zaroorat ke hisab se banaye gaye hain. Explore karein aur apne
-              business ke liye best plan chunein.
+              Our plans are designed to fit your needs. Explore and choose the best plan for your
+              business.
             </p>
             <a
               href="/pricing"
