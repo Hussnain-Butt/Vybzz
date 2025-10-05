@@ -1,0 +1,29 @@
+services:
+  api-gateway:
+    build:
+      context: ./Backend/api-gateway
+      dockerfile: Dockerfile.dev
+    environment:
+      - DOCKER=true
+    volumes:
+      - ./Backend/api-gateway:/app
+      - /app/node_modules
+    command: ["npx", "nodemon", "index.js"]
+
+  auth-service:
+    build:
+      context: ./Backend/services/auth-service
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./Backend/services/auth-service:/app
+      - /app/node_modules
+    command: ["npx", "nodemon", "index.js"]
+
+  user-service:
+    build:
+      context: ./Backend/services/user-service
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./Backend/services/user-service:/app
+      - /app/node_modules
+    command: ["npx", "nodemon", "index.js"]

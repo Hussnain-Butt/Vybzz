@@ -1,5 +1,9 @@
+// prisma/schema.prisma
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Debian-based images (bookworm-slim) work best with this target.
+  // If you build on another OS and see binary issues, adjust accordingly.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -10,10 +14,13 @@ datasource db {
 // Yahan hum apna User model define kar rahe hain
 model User {
   id        String   @id @default(cuid()) // Unique ID for each record
-  clerkId   String   @unique             // Clerk se aane wali user ID, unique honi chahiye
-  email     String   @unique             // User ka email, unique hona chahiye
-  name      String?                      // User ka naam, optional (?) ho sakta hai
-  imageUrl  String?                      // User ki profile picture, optional
-  createdAt DateTime @default(now())     // Record kab bana
-  updatedAt DateTime @updatedAt          // Record kab update hua
+  clerkId   String   @unique              // Clerk se aane wali user ID, unique honi chahiye
+  email     String   @unique              // User ka email, unique hona chahiye
+  name      String?                       // User ka naam, optional (?) ho sakta hai
+  imageUrl  String?                       // User ki profile picture, optional
+  createdAt DateTime @default(now())      // Record kab bana
+  updatedAt DateTime @updatedAt           // Record kab update hua
+
+  @@index([email])
+  @@index([clerkId])
 }
