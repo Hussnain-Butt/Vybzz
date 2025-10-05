@@ -1,0 +1,89 @@
+name: vybzz-stack
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    # ✅ Correct Postgres healthcheck (use pg_isready, not curl)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d appdb -h 127.0.0.1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api-gateway:
+    build:
+      context: ./Backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    env_file:
+      - ./Backend/api-gateway/.env
+    environment:
+      # ✅ Make gateway use Docker DNS (auth-service/user-service on port 3000)
+      DOCKER: "true"
+      # (Optional explicit URLs; uncomment if you prefer to override)
+      # AUTH_URL: http://auth-service:3000
+      # USER_URL: http://user-service:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  auth-service:
+    build:
+      context: ./Backend/services/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    env_file:
+      - ./Backend/services/auth-service/.env
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  user-service:
+    build:
+      context: ./Backend/services/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    env_file:
+      - ./Backend/services/user-service/.env
+    ports:
+      - "3002:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pg_data:
