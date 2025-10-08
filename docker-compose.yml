@@ -8,14 +8,14 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: appdb
+      POSTGRES_DB: vybzz
     ports:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     # ✅ Correct Postgres healthcheck (use pg_isready, not curl)
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d appdb -h 127.0.0.1 || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vybzz -h 127.0.0.1 || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 20

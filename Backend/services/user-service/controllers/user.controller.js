@@ -1,8 +1,10 @@
-// users-service/controllers/user.controller.js
+// user-service/controllers/user.controller.js
+
 const { Webhook } = require('svix')
 const { prisma } = require('../db/prisma')
 
-const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET
+const WEBHOOK_SECRET =
+  process.env.CLERK_WEBHOOK_SIGNING_SECRET || 'whsec_Exv1t8Dryq2i7Q+4oNDwlFGo805VlGNT'
 
 // Helper: primary email nikaalna
 const getPrimaryEmail = (data) => {
@@ -16,13 +18,20 @@ const fullName = (f, l) => [f, l].filter(Boolean).join(' ').trim() || null
 
 // Clerk webhook handler (RAW body required at route level)
 const handleClerkWebhook = async (req, res) => {
+  console.log('[Webhook] Received a request from Clerk...')
+
   try {
-    if (!WEBHOOK_SECRET) throw new Error('Missing CLERK_WEBHOOK_SIGNING_SECRET')
+    if (!WEBHOOK_SECRET) {
+      console.error('CRITICAL: Missing CLERK_WEBHOOK_SIGNING_SECRET in .env file')
+      throw new Error('Missing CLERK_WEBHOOK_SIGNING_SECRET')
+    }
 
     const sid = req.headers['svix-id']
     const ts = req.headers['svix-timestamp']
     const sig = req.headers['svix-signature']
+
     if (!sid || !ts || !sig) {
+      console.warn('[Webhook] Request is missing Svix headers.')
       return res.status(400).send('Missing Svix headers')
     }
 
@@ -38,22 +47,24 @@ const handleClerkWebhook = async (req, res) => {
     })
 
     const { type, data } = evt
-    console.log('[clerk webhook] received:', type, 'user:', data?.id)
+    console.log('[Webhook] VERIFIED! Event type:', type, 'User ID:', data?.id)
 
     if (type === 'user.created' || type === 'user.updated') {
       const email = getPrimaryEmail(data)
       const userData = {
         clerkId: data.id,
-        email, // should be non-null per your schema
+        email,
         name: fullName(data.first_name, data.last_name),
         imageUrl: data.image_url || null,
         updatedAt: new Date(),
       }
 
       if (!email) {
-        console.warn('[clerk webhook] user has no primary email, skipping upsert:', data.id)
+        console.warn('[Webhook] User has no primary email, skipping upsert:', data.id)
         return res.status(400).send('Missing primary email')
       }
+
+      console.log('[Webhook] Preparing to upsert user into DB:', userData)
 
       await prisma.user.upsert({
         where: { clerkId: data.id },
@@ -61,18 +72,23 @@ const handleClerkWebhook = async (req, res) => {
         create: { ...userData, createdAt: new Date() },
       })
 
-      console.log(`[clerk webhook] user upserted: ${data.id}`)
+      console.log(`[Webhook] SUCCESS: User upserted: ${data.id}`)
     }
 
     if (type === 'user.deleted') {
-      await prisma.user.deleteMany({ where: { clerkId: data.id } })
-      console.log(`[clerk webhook] user deleted: ${data.id}`)
+      // data object for deleted user only contains { id, object }
+      const clerkId = data?.id
+      if (clerkId) {
+        await prisma.user.deleteMany({ where: { clerkId: clerkId } })
+        console.log(`[Webhook] SUCCESS: User deleted: ${clerkId}`)
+      } else {
+        console.warn('[Webhook] Received user.deleted event without an ID.')
+      }
     }
 
     return res.status(200).send('OK')
   } catch (err) {
-    // Prisma or verification error
-    console.error('Webhook error:', err?.message || err)
+    console.error('!!! [Webhook] Webhook verification or processing FAILED:', err?.message || err)
     return res.status(400).send('Webhook failed')
   }
 }
