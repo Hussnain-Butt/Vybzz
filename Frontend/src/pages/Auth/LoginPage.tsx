@@ -41,7 +41,6 @@ const LoginPage: React.FC = () => {
         })
         if (result.status === 'complete') {
           await setActive({ session: result.createdSessionId })
-          // ClerkProvider.afterSignInUrl handle karega
         }
       } catch (err: any) {
         setError(err?.errors?.[0]?.longMessage || 'Verification failed')
@@ -59,14 +58,13 @@ const LoginPage: React.FC = () => {
     }
   }
 
-  // ✅ OAuth: redirectUrl + redirectUrlComplete + callback route required
+  // ✅ Yahan se 'redirectUrlComplete' hata diya gaya hai.
   const handleSocialLogin = async (strategy: 'oauth_google' | 'oauth_apple' | 'oauth_facebook') => {
     if (!isLoaded) return
     try {
       await signIn.authenticateWithRedirect({
         strategy,
         redirectUrl: '/sso-callback',
-        redirectUrlComplete: '/member/home',
       })
     } catch (err: any) {
       console.error(`Error during ${strategy} auth:`, err)
@@ -136,6 +134,7 @@ const LoginPage: React.FC = () => {
           )}
 
           <form onSubmit={handleEmailContinue} className="space-y-4">
+            {/* ...baaki form ka code waisa hi hai... */}
             {pendingVerification ? (
               <>
                 <p className="text-center text-sm text-[rgb(var(--color-text-secondary))]">
