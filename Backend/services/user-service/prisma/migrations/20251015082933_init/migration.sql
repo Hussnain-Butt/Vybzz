@@ -1,0 +1,71 @@
+/*
+  Warnings:
+
+  - You are about to drop the `creator_profiles` table. If the table is not empty, all the data it contains will be lost.
+  - You are about to drop the `users` table. If the table is not empty, all the data it contains will be lost.
+
+*/
+-- DropForeignKey
+ALTER TABLE "public"."creator_profiles" DROP CONSTRAINT "creator_profiles_userId_fkey";
+
+-- DropTable
+DROP TABLE "public"."creator_profiles";
+
+-- DropTable
+DROP TABLE "public"."users";
+
+-- CreateTable
+CREATE TABLE "public"."User" (
+    "id" TEXT NOT NULL,
+    "clerkId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT,
+    "imageUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."CreatorProfile" (
+    "id" TEXT NOT NULL,
+    "pageName" TEXT NOT NULL,
+    "pageUrl" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'DRAFT',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "youtubeUrl" TEXT,
+    "instagramUrl" TEXT,
+    "twitterUrl" TEXT,
+    "facebookUrl" TEXT,
+    "twitchUrl" TEXT,
+    "tiktokUrl" TEXT,
+    "userId" TEXT NOT NULL,
+
+    CONSTRAINT "CreatorProfile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_clerkId_key" ON "public"."User"("clerkId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "public"."User"("email");
+
+-- CreateIndex
+CREATE INDEX "User_email_idx" ON "public"."User"("email");
+
+-- CreateIndex
+CREATE INDEX "User_clerkId_idx" ON "public"."User"("clerkId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CreatorProfile_pageName_key" ON "public"."CreatorProfile"("pageName");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CreatorProfile_pageUrl_key" ON "public"."CreatorProfile"("pageUrl");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CreatorProfile_userId_key" ON "public"."CreatorProfile"("userId");
+
+-- AddForeignKey
+ALTER TABLE "public"."CreatorProfile" ADD CONSTRAINT "CreatorProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

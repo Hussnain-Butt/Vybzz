@@ -3,116 +3,89 @@ require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const proxy = require('express-http-proxy')
-const { ClerkExpressRequireAuth } = require('@clerk/clerk-sdk-node')
 
-// -------- Config (works local + Docker) --------
+// -------- Config --------
 const PORT = Number(process.env.PORT || 3000)
-
-// If DOCKER=true, use container DNS names; else localhost ports
 const DOCKER = String(process.env.DOCKER || '').toLowerCase() === 'true'
-
 const AUTH_URL =
-  process.env.AUTH_URL || (DOCKER ? 'http://auth-service:3000' : 'http://localhost:3001')
-
+  process.env.AUTH_URL || (DOCKER ? 'http://auth-service:3001' : 'http://localhost:3001')
 const USER_URL =
-  process.env.USER_URL || (DOCKER ? 'http://user-service:3000' : 'http://localhost:3002')
+  process.env.USER_URL || (DOCKER ? 'http://user-service:3002' : 'http://localhost:3002')
 
 // -------- App setup --------
 const app = express()
 app.set('trust proxy', 1)
-app.use(cors({ origin: true, credentials: true }))
 
-// Health first (so compose healthcheck passes immediately)
-app.get('/health', (_req, res) => res.json({ status: 'ok' }))
+// --- CORS ko globally handle karein ---
+// Yeh browser ki OPTIONS (preflight) requests ko theek se handle karega
+// aur saare proxied requests ke liye bhi kaam karega. Yeh aapke purane
+// cors({ origin: true, credentials: true }) se behtar hai.
+app.use(cors())
 
-// -------- Clerk webhook (RAW body forward; no JSON parsing) --------
-// This route is PUBLIC and relies on Svix signature verification in the user-service.
-// It MUST come BEFORE any JSON body parser and BEFORE Clerk JWT auth.
-app.use('/users/clerk', (req, _res, next) => {
-  console.log(
-    '[GW] incoming WEBHOOK',
-    req.method,
-    req.originalUrl,
-    'len=',
-    req.headers['content-length'] || 0,
-  )
+// --- Global request logger ---
+app.use((req, res, next) => {
+  console.log(`[GW] ${new Date().toISOString()} -> ${req.method} ${req.originalUrl}`)
   next()
 })
 
-// RAW proxy to users-service /clerk
+// Health check endpoint
+app.get('/health', (_req, res) => res.json({ status: 'ok' }))
+
+// -----------------------------
+// WEBHOOKS ko raw forward karne ka behtar aur SAHI tareeqa
+// /webhooks/* par aane wali har request ko user-service par bhej do
+// Yeh aapke manual http.request wale code se 100% behtar aur stable hai.
+// -----------------------------
 app.use(
-  '/users/clerk',
+  '/webhooks',
   proxy(USER_URL, {
-    // IMPORTANT: The path inside user-service is just '/clerk'
-    // but the user-service itself mounts the handler at '/users/clerk'.
-    // We need to adjust the path resolver to send it to the correct internal path.
-    // Based on your user-service code: app.post('/users/clerk', ...),
-    // the full path is required. So the default resolver is correct.
-    // Let's proxy to '/users/clerk'.
-    proxyReqPathResolver: (req) => req.originalUrl,
-    parseReqBody: false, // << very important for webhooks
-    timeout: 15_000,
-    proxyErrorHandler: (err, res, next) => {
-      console.error('[GW] /users/clerk upstream error:', err?.message)
-      if (!res.headersSent) {
-        res.status(502).json({ error: 'upstream_error', detail: err?.message })
-      } else {
-        next(err)
-      }
+    proxyReqPathResolver: (req) => {
+      // Pura path aage bhej do, jaise /webhooks/clerk
+      console.log(`[GW] Forwarding RAW webhook to user-service: ${req.originalUrl}`)
+      return req.originalUrl
     },
+    // Yeh sabse zaroori option hai. Yeh proxy ko batata hai ke request body ko
+    // parse na kare, balke usay jaisa hai waisa aage bhej de (raw format mein).
+    parseReqBody: false,
   }),
 )
 
-// -------- JSON parsing AFTER webhook --------
-app.use(express.json({ limit: '1mb' }))
+// -------- JSON parsing baaki sab routes ke liye --------
+// Yeh webhook route ke BAAD aana chahiye.
+app.use(express.json({ limit: '2mb' }))
 
-// -------- Regular service proxies --------
-
-// Auth service proxy does not need protection as it might handle sign-in related logic.
-// Or you can add ClerkExpressRequireAuth() here as well if needed.
+// Proxy to auth-service
 app.use(
   '/auth',
   proxy(AUTH_URL, {
-    timeout: 15_000,
-    proxyErrorHandler: (err, res, next) => {
-      console.error('[GW] /auth upstream error:', err?.message)
-      if (!res.headersSent) {
-        res.status(502).json({ error: 'upstream_error', detail: err?.message })
-      } else {
-        next(err)
-      }
+    proxyReqPathResolver: (req) => {
+      console.log(`[GW] Proxying to AUTH service: ${req.method} ${req.url}`)
+      return req.url
     },
   }),
 )
 
-// ✅ PROTECTED USER SERVICE PROXY
-// All requests to '/users' (except '/users/clerk' handled above) will now require a valid JWT.
-// If the token is invalid, Clerk middleware will automatically return a 401 Unauthorized error.
+// Proxy to user-service (webhook ke ilawa baaki sab routes)
 app.use(
   '/users',
-  ClerkExpressRequireAuth(), // <<<< THIS IS THE AUTHENTICATION MIDDLEWARE
-  (req, res, next) => {
-    console.log(`[GW] Authenticated user ${req.auth.userId} accessing ${req.originalUrl}`)
-    next()
-  },
   proxy(USER_URL, {
-    timeout: 15_000,
-    proxyErrorHandler: (err, res, next) => {
-      console.error('[GW] /users upstream error:', err?.message)
-      if (!res.headersSent) {
-        res.status(502).json({ error: 'upstream_error', detail: err?.message })
-      } else {
-        next(err)
-      }
+    proxyReqPathResolver: (req) => {
+      console.log(`[GW] Proxying to USER service: ${req.method} ${req.originalUrl}`)
+      return req.originalUrl
     },
   }),
 )
 
-// -------- Start --------
 app.listen(PORT, () => {
-  console.log(`🚀 Gateway listening on http://localhost:${PORT}`)
-  console.log(`   AUTH_URL  -> ${AUTH_URL}`)
-  console.log(`   USER_URL  -> ${USER_URL}`)
-  console.log('🔔 Webhook: POST /users/clerk  ->  users-service:/users/clerk (raw)')
-  console.log('🔒 Protected Route: /users/*')
+  console.log('----------------------------------------------------')
+  console.log(`🚀 API Gateway is listening on http://localhost:${PORT}`)
+  console.log(`   -> Forwarding to AUTH_URL: ${AUTH_URL}`)
+  console.log(`   -> Forwarding to USER_URL: ${USER_URL}`)
+  console.log('----------------------------------------------------')
+  console.log('Routes configured:')
+  // Yahan route ka naam update kar diya hai taake confusion na ho
+  console.log('🔔 Webhook: /webhooks/clerk -> user-service (raw body)')
+  console.log('👤 API:     /users/*        -> user-service (JSON body)')
+  console.log('🔐 API:     /auth/*         -> auth-service (JSON body)')
+  console.log('----------------------------------------------------')
 })

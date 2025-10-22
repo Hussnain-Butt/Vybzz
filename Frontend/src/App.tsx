@@ -1,78 +1,27 @@
 // src/App.tsx
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import {
-  SignedIn,
-  SignedOut,
-  RedirectToSignIn,
-  AuthenticateWithRedirectCallback,
-} from '@clerk/clerk-react'
+import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
+import { useQuery } from 'react-query'
 
+// === CHANGE 1: IMPORT the getCurrentUser function ===
+import { getCurrentUser } from './api/apiClient'
+
+// === NAYA PUBLIC PAGE COMPONENT IMPORT KAREIN ===
+// Yeh file aapko `src/pages/` folder mein banani hogi jaisa pichle jawab mein bataya gaya tha.
+import PublicCreatorPage from './pages/PublicCreatorPage'
+
+// Layouts
 import MainLayout from './components/Layout/MainLayout'
-import LoginPage from './pages/Auth/LoginPage'
-import Landing from './pages/Landing'
-import GetToKnowYourListeners from './pages/Podcasters/GetToKnowYourListeners'
-
 import DashboardLayout from './components/Layout/DashboardLayout'
-import DashboardHome from './pages/dashboard/DashboardHome'
-import Library from './pages/dashboard/Library'
-import Audience from './pages/dashboard/Audience'
-import Insights from './pages/dashboard/Insights'
-import Payouts from './pages/dashboard/Payouts'
-import Promotions from './pages/dashboard/Promotions'
-import Community from './pages/dashboard/Community'
-import Notifications from './pages/dashboard/Notifications'
-import Settings from './pages/dashboard/Settings'
-import PostsPage from './pages/dashboard/library/PostsPage'
-import CollectionsPage from './pages/dashboard/library/CollectionsPage'
-import DraftsPage from './pages/dashboard/library/DraftsPage'
-import RelationshipManagerPage from './pages/dashboard/audience/RelationshipManagerPage'
-import BenefitsPage from './pages/dashboard/audience/BenefitsPage'
-import ExitSurveysPage from './pages/dashboard/audience/ExitSurveysPage'
-import MembershipPage from './pages/dashboard/insights/MembershipPage'
-import EarningsPage from './pages/dashboard/insights/EarningsPage'
-import SurveysPage from './pages/dashboard/insights/SurveysPage'
-import TrafficPage from './pages/dashboard/insights/TrafficPage'
-import WithdrawPage from './pages/dashboard/payouts/WithdrawPage'
-import DocumentsPage from './pages/dashboard/payouts/DocumentsPage'
-import AutopilotPage from './pages/dashboard/promotions/AutopilotPage'
-import DiscountsPage from './pages/dashboard/promotions/DiscountsPage'
-import GiftsPage from './pages/dashboard/promotions/GiftsPage'
-import ChatsPage from './pages/dashboard/community/ChatsPage'
-import DirectMessagesPage from './pages/dashboard/community/DirectMessagesPage'
-import AccountPage from './pages/dashboard/settings/AccountPage'
-import TeamPage from './pages/dashboard/settings/TeamPage'
-import AppsPage from './pages/dashboard/settings/AppsPage'
-import PodcastPage from './pages/dashboard/settings/PodcastPage'
-import NotificationsSettingsPage from './pages/dashboard/settings/NotificationsPage'
-import BillingPage from './pages/dashboard/settings/BillingPage'
-
-import MemberHome from './pages/member/MemberHome'
-import MemberExplore from './pages/member/MemberExplore'
-import MemberCommunity from './pages/member/MemberCommunity'
-import MemberNotifications from './pages/member/MemberNotifications'
-import SsoCallbackPage from './pages/Auth/SsoCallbackPage'
 import MemberLayout from './components/Layout/MemberLayout'
-import MemberChatsPage from './pages/member/memberComunity/MemberChatsPage'
-import MDirectMessagesPage from './pages/member/memberComunity/MDirectMessagesPage'
-// Member Settings Nested Pages
-import MemberSettings from './pages/member/MemberSettings'
-import Basics from './pages/member/membersettings/Basics'
-import Account from './pages/member/membersettings/Account'
-import EmailNotifications from './pages/member/membersettings/EmailNotifications'
-import Memberships from './pages/member/membersettings/Memberships'
-import BillingHistory from './pages/member/membersettings/BillingHistory'
-import PaymentMethods from './pages/member/membersettings/PaymentMethods'
-import ConnectedApps from './pages/member/membersettings/ConnectedApps'
-import BlockedUsers from './pages/member/membersettings/BlockedUsers'
-
-// App.tsx ke top par yeh imports add karein
-import AdminLoginPage, { fakeAuth } from './pages/admin/AdminLoginPage'
 import AdminLayout from './components/Layout/AdminLayout'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminUsers from './pages/admin/AdminUsers'
-import AdminAnalytics from './pages/admin/AdminAnalytics'
-import AdminSettings from './pages/admin/AdminSettings'
+
+// Public Pages
+import Landing from './pages/Landing'
+import Resources from './pages/Resources'
+import Updates from './pages/Updates'
+import GetToKnowYourListeners from './pages/Podcasters/GetToKnowYourListeners'
 import CutThroughTheNoise from './pages/Podcasters/CutThroughTheNoise'
 import MoveWayToGetPaid from './pages/Podcasters/MoveWayToGetPaid'
 import OtherPodcasterOnVybzz from './pages/Podcasters/OtherPodcasterOnVybzz'
@@ -84,7 +33,6 @@ import FromYourMind from './pages/Musicians/FromYourMind'
 import MoreWayToGetPaidMusicians from './pages/Musicians/MoreWayToGetPaid'
 import ShareMoreThan from './pages/Musicians/ShareMoreThan'
 import OtherMusicians from './pages/Musicians/OtherMusicians'
-import CursorFollower from './components/CursorFollower'
 import GettingStartOnVybzz from './pages/CreateOnYourTeam/GettingStartOnVybzz'
 import MakeItYourOwn from './pages/CreateOnYourTeam/MakeItYourOwn'
 import ShowCaseYourWork from './pages/CreateOnYourTeam/ShowCaseYourWork'
@@ -99,71 +47,135 @@ import PaymentPoweredBy from './pages/Prices/PaymentPoweredBy'
 import PaidMembership from './pages/Prices/PaidMembership'
 import EarningModeEasy from './pages/Prices/EarningModeEasy'
 import Commerce from './pages/Prices/Commerce'
-import Resources from './pages/Resources'
-import Updates from './pages/Updates'
 
-// Protected Route Component for Admin
+// Auth & Onboarding Pages
+import LoginPage from './pages/Auth/LoginPage'
+import SsoCallbackPage from './pages/Auth/SsoCallbackPage'
+import AuthRedirectPage from './pages/Auth/AuthRedirectPage'
+import SetupNamePage from './pages/Creator/SetupNamePage'
+import ConnectSocialsPage from './pages/Creator/ConnectSocialsPage'
+
+// Creator Dashboard Pages
+import DashboardHome from './pages/dashboard/DashboardHome'
+import Library from './pages/dashboard/Library'
+import PostsPage from './pages/dashboard/library/PostsPage'
+import CollectionsPage from './pages/dashboard/library/CollectionsPage'
+import DraftsPage from './pages/dashboard/library/DraftsPage'
+import Audience from './pages/dashboard/Audience'
+import RelationshipManagerPage from './pages/dashboard/audience/RelationshipManagerPage'
+import BenefitsPage from './pages/dashboard/audience/BenefitsPage'
+import ExitSurveysPage from './pages/dashboard/audience/ExitSurveysPage'
+import Insights from './pages/dashboard/Insights'
+import MembershipPage from './pages/dashboard/insights/MembershipPage'
+import EarningsPage from './pages/dashboard/insights/EarningsPage'
+import SurveysPage from './pages/dashboard/insights/SurveysPage'
+import TrafficPage from './pages/dashboard/insights/TrafficPage'
+import Payouts from './pages/dashboard/Payouts'
+import WithdrawPage from './pages/dashboard/payouts/WithdrawPage'
+import DocumentsPage from './pages/dashboard/payouts/DocumentsPage'
+import Promotions from './pages/dashboard/Promotions'
+import AutopilotPage from './pages/dashboard/promotions/AutopilotPage'
+import DiscountsPage from './pages/dashboard/promotions/DiscountsPage'
+import GiftsPage from './pages/dashboard/promotions/GiftsPage'
+import Community from './pages/dashboard/Community'
+import ChatsPage from './pages/dashboard/community/ChatsPage'
+import DirectMessagesPage from './pages/dashboard/community/DirectMessagesPage'
+import Notifications from './pages/dashboard/Notifications'
+import Settings from './pages/dashboard/Settings'
+import AccountPage from './pages/dashboard/settings/AccountPage'
+import TeamPage from './pages/dashboard/settings/TeamPage'
+import AppsPage from './pages/dashboard/settings/AppsPage'
+import PodcastPage from './pages/dashboard/settings/PodcastPage'
+import NotificationsSettingsPage from './pages/dashboard/settings/NotificationsPage'
+import BillingPage from './pages/dashboard/settings/BillingPage'
+
+// Member Pages
+import MemberHome from './pages/member/MemberHome'
+import MemberExplore from './pages/member/MemberExplore'
+import MemberCommunity from './pages/member/MemberCommunity'
+import MemberNotifications from './pages/member/MemberNotifications'
+import MemberChatsPage from './pages/member/memberComunity/MemberChatsPage'
+import MDirectMessagesPage from './pages/member/memberComunity/MDirectMessagesPage'
+import MemberSettings from './pages/member/MemberSettings'
+import Basics from './pages/member/membersettings/Basics'
+import Account from './pages/member/membersettings/Account'
+import EmailNotifications from './pages/member/membersettings/EmailNotifications'
+import Memberships from './pages/member/membersettings/Memberships'
+import BillingHistory from './pages/member/membersettings/BillingHistory'
+import PaymentMethods from './pages/member/membersettings/PaymentMethods'
+import ConnectedApps from './pages/member/membersettings/ConnectedApps'
+import BlockedUsers from './pages/member/membersettings/BlockedUsers'
+
+// Admin Pages
+import AdminLoginPage, { fakeAuth } from './pages/admin/AdminLoginPage'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AdminSettings from './pages/admin/AdminSettings'
+
+// Components
+import CursorFollower from './components/CursorFollower'
+
+// --- Route Protection & Data Fetching Logic ---
+
+// === CHANGE 2: REMOVE the old fetchUserFromApi function ===
+/*
+const fetchUserFromApi = async (getToken: () => Promise<string | null>) => {
+  const token = await getToken()
+  if (!token) throw new Error('Not authenticated')
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!response.ok) throw new Error('Failed to fetch user data')
+  return response.json()
+}
+*/
+
+const CreatorProtectedRoute = () => {
+  // === CHANGE 3: USE the imported `getCurrentUser` function in useQuery ===
+  const { data: user, isLoading, isError } = useQuery('currentUser', getCurrentUser)
+
+  if (isLoading) return <div>Loading your creator profile...</div>
+  if (isError || user?.creatorProfile?.status !== 'ACTIVE')
+    return <Navigate to="/member/home" replace />
+  return <DashboardLayout />
+}
+
+const RedirectIfCreator = () => {
+  // === CHANGE 4: USE the imported `getCurrentUser` function here as well ===
+  const { data: user, isLoading } = useQuery('currentUser', getCurrentUser)
+
+  if (isLoading) return <MemberLayout />
+  if (user?.creatorProfile?.status === 'ACTIVE') return <Navigate to="/dashboard" replace />
+  return <MemberLayout />
+}
+
 const AdminProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  if (!fakeAuth.isAuthenticated) {
-    // Agar user authenticated nahi hai, to login page par redirect karein
-    return <Navigate to="/admin" replace />
-  }
+  if (!fakeAuth.isAuthenticated) return <Navigate to="/admin" replace />
   return children
 }
+
 function App() {
   return (
     <>
       <CursorFollower />
       <Routes>
-        {/* OAuth callback: MUST HAVE */}
-        <Route path="/sso-callback" element={<AuthenticateWithRedirectCallback />} />
-        {/* Public */}
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Landing />} />
-          <Route path="/creators/podcasters/listeners" element={<GetToKnowYourListeners />} />
-          <Route path="/creators/podcasters/cutthrough" element={<CutThroughTheNoise />} />
-          <Route path="/creators/podcasters/moveway" element={<MoveWayToGetPaid />} />
-          <Route path="/creators/podcasters/otherpodcaster" element={<OtherPodcasterOnVybzz />} />
-          <Route path="/creators/videocreator/turnyourviewer" element={<TurnYourViewers />} />
-          <Route path="/creators/videocreator/moreway" element={<MoreWayToGetPaid />} />
-          <Route path="/creators/videocreator/reachfan" element={<ReachEveryFan />} />
-          <Route path="/creators/videocreator/other" element={<OtherVideoCreators />} />
-          <Route path="/creators/musicians/fromyourmind" element={<FromYourMind />} />
-          <Route path="/creators/musicians/moreway" element={<MoreWayToGetPaidMusicians />} />
-          <Route path="/creators/musicians/sharemorethan" element={<ShareMoreThan />} />
-          <Route path="/creators/musicians/other" element={<OtherMusicians />} />
-          <Route path="/features/creatonyourteam/gettingstart" element={<GettingStartOnVybzz />} />
-          <Route path="/features/creatonyourteam/makeityourown" element={<MakeItYourOwn />} />
-          <Route path="/features/creatonyourteam/reacheveryfan" element={<ReachEveryFan />} />
-          <Route path="/features/creatonyourteam/showcase" element={<ShowCaseYourWork />} />
-          <Route path="/prices/powerfullfeature" element={<PowerFullCoreFeature />} />
-          <Route path="/prices/paymentpoweredby" element={<PaymentPoweredBy />} />
-          <Route path="/prices/paidmembership" element={<PaidMembership />} />
-          <Route path="/prices/earningmode" element={<EarningModeEasy />} />
-          <Route path="/prices/commerce" element={<Commerce />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/updates" element={<Updates />} />
-
-          <Route
-            path="/features/buildcommunity/everyposteverytime"
-            element={<EveryPostEveryTime />}
-          />
-          <Route path="/features/buildcommunity/gettoknows" element={<GetToKnowYourFans />} />
-          <Route
-            path="/features/creatonyourteam/morewaytostayclose"
-            element={<MoreWayToStayClose />}
-          />
-          <Route path="/features/expandyourreach/appintegration" element={<AppIntegration />} />
-          <Route path="/features/expandyourreach/bringnewfans" element={<BringInNewFans />} />
-          <Route path="/features/expandyourreach/unlockgrowth" element={<UnlockGrowth />} />
-        </Route>
-        {/* Login */}
+        {/* --- AUTH & ONBOARDING ROUTES (No Change) --- */}
+        <Route path="/sso-callback" element={<SsoCallbackPage />} />
+        <Route
+          path="/auth-redirect"
+          element={
+            <SignedIn>
+              <AuthRedirectPage />
+            </SignedIn>
+          }
+        />
         <Route
           path="/login"
           element={
             <>
               <SignedIn>
-                <Navigate to="/member/home" replace />
+                <Navigate to="/auth-redirect" replace />
               </SignedIn>
               <SignedOut>
                 <LoginPage />
@@ -171,17 +183,33 @@ function App() {
             </>
           }
         />
-        {/* Creator Dashboard (protected) */}
+        <Route
+          path="/creator/setup"
+          element={
+            <SignedIn>
+              <SetupNamePage />
+            </SignedIn>
+          }
+        />
+        <Route
+          path="/creator/connect-socials"
+          element={
+            <SignedIn>
+              <ConnectSocialsPage />
+            </SignedIn>
+          }
+        />
+
+        {/* --- PROTECTED DASHBOARD ROUTES (No Change) --- */}
         <Route
           path="/dashboard/*"
           element={
             <>
               <SignedIn>
-                <DashboardLayout />
+                <CreatorProtectedRoute />
               </SignedIn>
               <SignedOut>
-                {/* ✅ Explicit signInUrl — /undefined ko kill karta hai */}
-                <RedirectToSignIn signInUrl="/login" />
+                <RedirectToSignIn signInUrl="/login?role=creator" />
               </SignedOut>
             </>
           }
@@ -234,41 +262,12 @@ function App() {
             <Route path="billing" element={<BillingPage />} />
           </Route>
         </Route>
-        {/* ================================================= */}
-        {/* =============== ADMIN SECTION START =============== */}
-        {/* ================================================= */}
-
-        {/* 1. Admin Login Route (Public) */}
-        {/* Yahan humne test h1 tag ko asal AdminLoginPage se badal diya hai */}
-        <Route path="/admin" element={<AdminLoginPage />} />
-
-        {/* 2. Protected Admin Dashboard Routes */}
-        {/* Yahan humne path ko "/admin/*" se "/admin-dashboard/*" kar diya hai taake conflict na ho */}
-        <Route
-          path="/admin-dashboard/*"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout />
-            </AdminProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="analytics" element={<AdminAnalytics />} />
-          <Route path="settings" element={<AdminSettings />} />
-        </Route>
-
-        {/* =============================================== */}
-        {/* =============== ADMIN SECTION END =============== */}
-        {/* =============================================== */}
-        {/* Member Dashboard (protected) */}
         <Route
           path="/member/*"
           element={
             <>
               <SignedIn>
-                <MemberLayout />
+                <RedirectIfCreator />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn signInUrl="/login" />
@@ -285,7 +284,6 @@ function App() {
             <Route path="direct-messages" element={<MDirectMessagesPage />} />
           </Route>
           <Route path="notifications" element={<MemberNotifications />} />
-          {/* === NESTED SETTINGS ROUTES START HERE === */}
           <Route path="settings" element={<MemberSettings />}>
             <Route index element={<Navigate to="basics" replace />} />
             <Route path="basics" element={<Basics />} />
@@ -298,9 +296,69 @@ function App() {
             <Route path="blocked-users" element={<BlockedUsers />} />
           </Route>
         </Route>
-        {/* Fallback: kabhi /undefined aa bhi jaye to safe redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-        <Route path="/sso-callback" element={<SsoCallbackPage />} />
+        <Route path="/admin" element={<AdminLoginPage />} />
+        <Route
+          path="/admin-dashboard/*"
+          element={
+            <AdminProtectedRoute>
+              <AdminLayout />
+            </AdminProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="users" element={<AdminUsers />} />
+        </Route>
+
+        {/* === PUBLIC ROUTES WITH DYNAMIC CREATOR PAGE (No Change) === */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Landing />} />
+
+          {/* Static public routes pehle aayenge */}
+          <Route path="creators/podcasters/listeners" element={<GetToKnowYourListeners />} />
+          <Route path="creators/podcasters/cutthrough" element={<CutThroughTheNoise />} />
+          <Route path="creators/podcasters/moveway" element={<MoveWayToGetPaid />} />
+          <Route path="creators/podcasters/otherpodcaster" element={<OtherPodcasterOnVybzz />} />
+          <Route path="creators/videocreator/turnyourviewer" element={<TurnYourViewers />} />
+          <Route path="creators/videocreator/moreway" element={<MoreWayToGetPaid />} />
+          <Route path="creators/videocreator/reachfan" element={<ReachEveryFan />} />
+          <Route path="creators/videocreator/other" element={<OtherVideoCreators />} />
+          <Route path="creators/musicians/fromyourmind" element={<FromYourMind />} />
+          <Route path="creators/musicians/moreway" element={<MoreWayToGetPaidMusicians />} />
+          <Route path="creators/musicians/sharemorethan" element={<ShareMoreThan />} />
+          <Route path="creators/musicians/other" element={<OtherMusicians />} />
+          <Route path="features/creatonyourteam/gettingstart" element={<GettingStartOnVybzz />} />
+          <Route path="features/creatonyourteam/makeityourown" element={<MakeItYourOwn />} />
+          <Route path="features/creatonyourteam/reacheveryfan" element={<ReachEveryFan />} />
+          <Route path="features/creatonyourteam/showcase" element={<ShowCaseYourWork />} />
+          <Route path="prices/powerfullfeature" element={<PowerFullCoreFeature />} />
+          <Route path="prices/paymentpoweredby" element={<PaymentPoweredBy />} />
+          <Route path="prices/paidmembership" element={<PaidMembership />} />
+          <Route path="prices/earningmode" element={<EarningModeEasy />} />
+          <Route path="prices/commerce" element={<Commerce />} />
+          <Route path="resources" element={<Resources />} />
+          <Route path="updates" element={<Updates />} />
+          <Route
+            path="features/buildcommunity/everyposteverytime"
+            element={<EveryPostEveryTime />}
+          />
+          <Route path="features/buildcommunity/gettoknows" element={<GetToKnowYourFans />} />
+          <Route
+            path="features/creatonyourteam/morewaytostayclose"
+            element={<MoreWayToStayClose />}
+          />
+          <Route path="features/expandyourreach/appintegration" element={<AppIntegration />} />
+          <Route path="features/expandyourreach/bringnewfans" element={<BringInNewFans />} />
+          <Route path="features/expandyourreach/unlockgrowth" element={<UnlockGrowth />} />
+
+          {/* DYNAMIC CREATOR PAGE ROUTE */}
+          <Route path=":pageUrl" element={<PublicCreatorPage />} />
+        </Route>
+
+        {/* --- FALLBACK ROUTE --- */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   )

@@ -1,6 +1,7 @@
 import React, { useState, useLayoutEffect, useRef, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { gsap } from 'gsap'
+import { useUser } from '@clerk/clerk-react' // ✅ Clerk ka hook import kiya
 import {
   LuLayoutDashboard,
   LuLibrary,
@@ -13,7 +14,7 @@ import {
   LuPlus,
   LuPanelLeftClose,
   LuPanelLeftOpen,
-  LuX, // ✅ Mobile close icon ke liye
+  LuX,
 } from 'react-icons/lu'
 import { FaChartBar } from 'react-icons/fa'
 import { FiMoreHorizontal } from 'react-icons/fi'
@@ -38,7 +39,6 @@ const sidebarNavItems: Item[] = [
   { name: 'Settings', path: '/dashboard/settings', Icon: LuSettings },
 ]
 
-// ✅ Props ko update kiya
 interface SidebarProps {
   isCollapsed: boolean
   setCollapsed: (collapsed: boolean) => void
@@ -59,6 +59,22 @@ const Sidebar: React.FC<SidebarProps> = ({
   const liRefs = useRef<(HTMLLIElement | null)[]>([])
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
+  // ✅ User data fetch karne ke liye hook
+  const { user } = useUser()
+
+  // ✅ Profile picture aur initials ke liye logic
+  const googleAccount = user?.externalAccounts.find((acc) => acc.provider === 'oauth_google')
+  const displayImageUrl = googleAccount?.imageUrl || user?.profileImageUrl
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return '?'
+    const names = name.split(' ')
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+
   useEffect(() => {
     if (isCollapsed) setMenuOpen(false)
   }, [isCollapsed])
@@ -78,9 +94,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     } else if (indicatorRef.current) {
       gsap.to(indicatorRef.current, { opacity: 0, duration: 0.3 })
     }
-  }, [location.pathname, isCollapsed, isMobileOpen]) // isMobileOpen add kiya
+  }, [location.pathname, isCollapsed, isMobileOpen])
 
-  // ✅ Mobile par link click karne par sidebar band ho jayega
   const handleLinkClick = () => {
     setMobileOpen(false)
   }
@@ -90,12 +105,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       ref={sidebarRef}
       className={`
         flex h-screen flex-col bg-[rgb(var(--color-surface-1))] border-r border-[rgb(var(--color-surface-2))] transition-transform duration-300 ease-in-out
-        
-        // ✅ Mobile View (Default): Fixed, off-screen, z-index upar
         fixed inset-y-0 left-0 z-40 w-64 transform 
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-
-        // ✅ Desktop View (md se upar): Relative, on-screen, width change hoga
         md:relative md:translate-x-0 md:transition-all
         ${isCollapsed ? 'md:w-20' : 'md:w-64'}
       `}
@@ -106,7 +117,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           isCollapsed ? 'justify-center px-2 pt-3 pb-2' : 'justify-between px-3 py-3'
         }`}
       >
-        {/* ✅ Logo & Title (ab !isCollapsed se control hoga) */}
         {!isCollapsed && (
           <div className="flex items-center gap-2 min-w-0">
             <img
@@ -118,8 +128,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             <h1 className="text-white font-semibold truncate">Vybzz Nation</h1>
           </div>
         )}
-
-        {/* ✅ Desktop Collapse button */}
         <button
           onClick={() => setCollapsed(!isCollapsed)}
           className={`${
@@ -129,8 +137,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <LuPanelLeftClose size={20} />
         </button>
-
-        {/* ✅ Desktop Expand button */}
         {isCollapsed && (
           <button
             onClick={() => setCollapsed(false)}
@@ -140,8 +146,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             <LuPanelLeftOpen size={20} />
           </button>
         )}
-
-        {/* ✅ Mobile Close button */}
         <button
           onClick={() => setMobileOpen(false)}
           className="absolute top-3 right-3 grid md:hidden h-10 w-10 place-items-center rounded-full hover:bg-[rgb(var(--color-surface-2))] text-[rgb(var(--color-text-secondary))]"
@@ -184,7 +188,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   const state = isActive
                     ? 'sb-active bg-[rgb(var(--color-surface-2))] text-white'
                     : 'text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] hover:text-white'
-                  // Mobile par hamesha expanded style rahega
                   return `${base} ${isCollapsed ? `md:${collapsed}` : expanded} ${state}`
                 }}
               >
@@ -208,7 +211,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer */}
       <div className="px-3 pb-4 pt-2 space-y-3">
-        {/* Create button */}
         <button
           className={`${
             isCollapsed
@@ -224,7 +226,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
-        {/* Profile card */}
+        {/* Profile card - ✅ DYNAMIC DATA KE SATH UPDATE KIYA GAYA */}
         <div
           className={`relative transition-colors ${
             isCollapsed
@@ -232,8 +234,16 @@ const Sidebar: React.FC<SidebarProps> = ({
               : 'flex items-center gap-3 rounded-2xl p-2.5 bg-[rgb(var(--color-surface-2))] border border-[rgb(var(--color-surface-3))]'
           }`}
         >
-          <div className="w-10 h-10 rounded-full bg-[rgb(var(--color-accent-orange))] grid place-items-center text-white font-bold shrink-0">
-            M
+          <div className="w-10 h-10 rounded-full bg-[rgb(var(--color-accent-orange))] grid place-items-center text-white font-bold shrink-0 overflow-hidden">
+            {displayImageUrl ? (
+              <img
+                src={displayImageUrl}
+                alt={user?.fullName || 'User profile'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span>{getInitials(user?.fullName)}</span>
+            )}
           </div>
 
           <div
@@ -241,7 +251,9 @@ const Sidebar: React.FC<SidebarProps> = ({
               isCollapsed ? 'opacity-0 w-0 md:opacity-0 md:w-0' : 'opacity-100'
             }`}
           >
-            <div className="text-sm font-semibold text-white truncate">Muhammad H...</div>
+            <div className="text-sm font-semibold text-white truncate">
+              {user?.fullName || 'Creator'}
+            </div>
             <div className="text-xs text-[rgb(var(--color-text-muted))]">Creator</div>
           </div>
 

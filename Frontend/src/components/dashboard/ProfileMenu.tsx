@@ -1,8 +1,8 @@
-// src/components/dashboard/ProfileMenu.tsx
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { LogOut } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useClerk } from '@clerk/clerk-react'
 
 const menuLinks = [
   'News',
@@ -17,7 +17,6 @@ const menuLinks = [
 interface ProfileMenuProps {
   isOpen: boolean
   onClose: () => void
-  // We'll receive the button reference to position the menu
   buttonRef: React.RefObject<HTMLButtonElement>
 }
 
@@ -25,7 +24,10 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, buttonRef })
   const [activeTheme, setActiveTheme] = useState('System')
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Animation for menu open/close
+  const { signOut } = useClerk()
+  const navigate = useNavigate()
+
+  // Menu open/close ke liye animation
   useLayoutEffect(() => {
     if (isOpen) {
       gsap.fromTo(
@@ -36,10 +38,9 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, buttonRef })
     }
   }, [isOpen])
 
-  // Handle click outside to close
+  // Menu ke bahar click karne par use band karne ka logic
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Close if click is outside the menu AND outside the button that opens it
       if (
         menuRef.current &&
         !menuRef.current.contains(event.target as Node) &&
@@ -57,10 +58,14 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, buttonRef })
     }
   }, [isOpen, onClose, buttonRef])
 
+  // Sign-out process ko handle karne wala function
+  const handleSignOut = () => {
+    signOut(() => navigate('/'))
+  }
+
   if (!isOpen) return null
 
   return (
-    // ✅ FIX: Changed positioning classes to be above the parent
     <div
       ref={menuRef}
       className="absolute bottom-full left-0 right-0 mb-2 w-72 bg-[rgb(var(--color-surface-2))] rounded-xl shadow-2xl border border-[rgb(var(--color-surface-3))] z-50"
@@ -104,10 +109,12 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, buttonRef })
 
         {/* Logout Section */}
         <div className="my-1 border-t border-[rgb(var(--color-surface-3))]"></div>
-        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-red-400 hover:bg-[rgb(var(--color-surface-3))]">
-          <Link to="/" className="flex align-items-center justify-content-center gap-5">
-            <LogOut size={16} /> Log out
-          </Link>
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-red-400 hover:bg-[rgb(var(--color-surface-3))]"
+        >
+          <LogOut size={16} />
+          <span>Log out</span>
         </button>
       </div>
     </div>
