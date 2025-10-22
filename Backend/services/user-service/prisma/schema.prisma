@@ -1,8 +1,8 @@
-// prisma/schema.prisma
+// path: user-service/prisma/schema.prisma
+
 generator client {
   provider      = "prisma-client-js"
-  // Debian-based images (bookworm-slim) work best with this target.
-  // If you build on another OS and see binary issues, adjust accordingly.
+  // Keep binaryTargets as per your deployment needs
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -11,16 +11,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Yahan hum apna User model define kar rahe hain
 model User {
-  id        String   @id @default(cuid()) // Unique ID for each record
-  clerkId   String   @unique              // Clerk se aane wali user ID, unique honi chahiye
-  email     String   @unique              // User ka email, unique hona chahiye
-  name      String?                       // User ka naam, optional (?) ho sakta hai
-  imageUrl  String?                       // User ki profile picture, optional
-  createdAt DateTime @default(now())      // Record kab bana
-  updatedAt DateTime @updatedAt           // Record kab update hua
+  id             String          @id @default(cuid())
+  clerkId        String          @unique
+  email          String          @unique
+  name           String?
+  imageUrl       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  // Relation ka naam wahi rehne diya hai jo aapne provide kiya
+  creatorProfile CreatorProfile? @relation("UserCreatorProfile")
 
   @@index([email])
   @@index([clerkId])
+}
+
+model CreatorProfile {
+  id           String   @id @default(cuid())
+  pageName     String   @unique
+  pageUrl      String   @unique
+  status       String   @default("DRAFT") // 'DRAFT', 'ACTIVE'
+
+  // === YEH FIELDS ADD KIYE GAYE HAIN ===
+  profileImageUrl String?  // Profile photo ke liye
+  bannerUrl       String?  // Dashboard ke banner ke liye
+  bio             String?  @db.Text // Page description ke liye, @db.Text lambe text ke liye behtar hai
+  onboardingStep  Int      @default(2) // Onboarding process track karne ke liye (Step 2 se shuru)
+
+  // Social Links
+  youtubeUrl   String?
+  instagramUrl String?
+  twitterUrl   String?
+  facebookUrl  String?
+  twitchUrl    String?
+  tiktokUrl    String?
+
+  // Relation
+  userId       String   @unique
+  user         User     @relation("UserCreatorProfile", fields: [userId], references: [id])
+
+  // Timestamps
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

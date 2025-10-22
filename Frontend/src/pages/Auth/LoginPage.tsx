@@ -1,6 +1,8 @@
 // src/pages/Auth/LoginPage.tsx
+
 import React, { useState, useEffect, useRef } from 'react'
 import { useSignIn } from '@clerk/clerk-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { gsap } from 'gsap'
 
 import VybzzLogo from '../../assets/Logo.png'
@@ -10,13 +12,16 @@ import GoogleLogo from '../../assets/google.png'
 
 const LoginPage: React.FC = () => {
   const { isLoaded, signIn, setActive } = useSignIn()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  // URL se user ka irada (role) nikalo. Default 'member' hai.
+  const role = searchParams.get('role') || 'member'
 
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('') // reserved if you add password strategy later
   const [pendingVerification, setPendingVerification] = useState(false)
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | undefined>(undefined)
-
   const formContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -41,6 +46,8 @@ const LoginPage: React.FC = () => {
         })
         if (result.status === 'complete') {
           await setActive({ session: result.createdSessionId })
+          // Email login ke baad, role ke saath Gatekeeper par bhejo
+          navigate(`/auth-redirect?role=${role}`)
         }
       } catch (err: any) {
         setError(err?.errors?.[0]?.longMessage || 'Verification failed')
@@ -58,19 +65,28 @@ const LoginPage: React.FC = () => {
     }
   }
 
-  // ✅ Yahan se 'redirectUrlComplete' hata diya gaya hai.
+  // ✅ --- [UPDATED PART START] --- ✅
+  // Hum ab user ke 'role' ko URL ke bajaye sessionStorage mein save karenge.
   const handleSocialLogin = async (strategy: 'oauth_google' | 'oauth_apple' | 'oauth_facebook') => {
     if (!isLoaded) return
     try {
+      // Step A: Clerk ko call karne se PEHLE user ka irada (role) sessionStorage mein save kar lein.
+      // Yeh 100% reliable tareeqa hai.
+      sessionStorage.setItem('authIntent', role)
+
+      // Step B: Ab Clerk ko redirect karne dein.
+      // Clerk ki global settings (jo main.tsx mein hain) usay automatically `/auth-redirect` par bhej dengi.
       await signIn.authenticateWithRedirect({
         strategy,
         redirectUrl: '/sso-callback',
+        redirectUrlComplete: '/auth-redirect',
       })
     } catch (err: any) {
       console.error(`Error during ${strategy} auth:`, err)
       setError(err?.errors?.[0]?.longMessage || 'OAuth failed')
     }
   }
+  // ✅ --- [UPDATED PART END] --- ✅
 
   return (
     <div className="min-h-screen w-full bg-[rgb(var(--color-background-dark))] text-[rgb(var(--color-text-primary))] p-4 font-sans flex flex-col items-center justify-center">
@@ -80,7 +96,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         <h1 className="text-3xl font-bold text-[rgb(var(--color-text-primary))] text-center mb-6">
-          Log in or sign up
+          {role === 'creator' ? 'Creator Login' : 'Log in or sign up'}
         </h1>
 
         <div className="bg-[rgb(var(--color-background-light))] rounded-2xl p-8 border border-[rgb(var(--color-surface-2))]">
@@ -134,7 +150,6 @@ const LoginPage: React.FC = () => {
           )}
 
           <form onSubmit={handleEmailContinue} className="space-y-4">
-            {/* ...baaki form ka code waisa hi hai... */}
             {pendingVerification ? (
               <>
                 <p className="text-center text-sm text-[rgb(var(--color-text-secondary))]">

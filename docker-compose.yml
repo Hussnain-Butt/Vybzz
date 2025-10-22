@@ -1,3 +1,5 @@
+version: '3.8'
+
 name: vybzz-stack
 
 services:
@@ -10,12 +12,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: vybzz
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pg_data:/var/lib/postgresql/data
-    # ✅ Correct Postgres healthcheck (use pg_isready, not curl)
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d vybzz -h 127.0.0.1 || exit 1"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d vybzz -h 127.0.0.1 || exit 1']
       interval: 5s
       timeout: 3s
       retries: 20
@@ -29,20 +30,18 @@ services:
     env_file:
       - ./Backend/api-gateway/.env
     environment:
-      # ✅ Make gateway use Docker DNS (auth-service/user-service on port 3000)
-      DOCKER: "true"
-      # (Optional explicit URLs; uncomment if you prefer to override)
-      # AUTH_URL: http://auth-service:3000
-      # USER_URL: http://user-service:3000
+      DOCKER: 'true'
+      AUTH_URL: 'http://auth-service:3001'
+      USER_URL: 'http://user-service:3002'
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       auth-service:
         condition: service_healthy
       user-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -55,13 +54,15 @@ services:
     restart: unless-stopped
     env_file:
       - ./Backend/services/auth-service/.env
+    environment:
+      PORT: '3001'
     ports:
-      - "3001:3000"
+      - '3001:3001'
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -70,17 +71,34 @@ services:
     build:
       context: ./Backend/services/user-service
       dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/vybzz
     container_name: user-service
     restart: unless-stopped
-    env_file:
-      - ./Backend/services/user-service/.env
+    environment:
+      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz'
+      CLERK_WEBHOOK_SIGNING_SECRET: 'whsec_xeTb2X35/E+kbYPVLIU5ut6x8ND3bzzb'
+      CLERK_SECRET_KEY: 'sk_test_0pqUaGtPfRk3MgllAFsqJCUCh0acO6OUEBKd7klwRn'
+      CLERK_PUBLISHABLE_KEY: 'pk_test_d2VsY29tZS1kZWVyLTAuY2xlcmsuYWNjb3VudHMuZGV2JA'
+
+      # === YEH LINE ADD KI GAYI HAI DEBUGGING KE LIYE ===
+      DEBUG_WEBHOOK_BYPASS_VERIFY: 'true'
+
+      # === CLOUDINARY CONFIG ===
+      CLOUDINARY_CLOUD_NAME: 'dxi6hlanc'
+      CLOUDINARY_API_KEY: '373723696384711'
+      CLOUDINARY_API_SECRET: 'gfJHpY8i2VM4h7ven7ym89jMF5w'
+
+      # === SERVICE CONFIG ===
+      PORT: '3002'
+      NODE_ENV: 'development'
     ports:
-      - "3002:3000"
+      - '3002:3002'
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
       interval: 10s
       timeout: 3s
       retries: 10

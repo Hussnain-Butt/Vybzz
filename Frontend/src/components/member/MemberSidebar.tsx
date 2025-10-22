@@ -1,6 +1,7 @@
 import React, { useState, useLayoutEffect, useRef, useEffect } from 'react'
-import { NavLink, useLocation, Link } from 'react-router-dom'
+import { NavLink, useLocation, Link, useNavigate } from 'react-router-dom'
 import { gsap } from 'gsap'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import {
   LuSearch,
   LuBell,
@@ -15,11 +16,6 @@ import { FaCircleNotch } from 'react-icons/fa'
 import { CiCoffeeCup } from 'react-icons/ci'
 import { FiMoreHorizontal } from 'react-icons/fi'
 import Logo from '../../assets/Logo.png'
-
-// Apne Vybz logo ko yahan import karein
-// import VybzLogo from '../../assets/vybz-logo.svg';
-
-// ProfileMenu creator dashboard se import karein, path sahi karein
 import ProfileMenu from '../dashboard/ProfileMenu'
 
 type Item = {
@@ -51,35 +47,35 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
   const [isCreatorCardVisible, setCreatorCardVisible] = useState(true)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
+  const { user } = useUser()
+  const { signOut } = useClerk()
+  const navigate = useNavigate()
+
   const location = useLocation()
   const sidebarRef = useRef<HTMLElement>(null)
   const indicatorRef = useRef<HTMLDivElement>(null)
   const liRefs = useRef<(HTMLLIElement | null)[]>([])
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
-  // Screen size ke hisab se mobile view detect karein
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
+  const googleAccount = user?.externalAccounts.find((acc) => acc.provider === 'oauth_google')
+  const displayImageUrl = googleAccount?.imageUrl || user?.profileImageUrl
 
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Agar sidebar collapsed hai (desktop) ya mobile par hai, to profile menu band karein
   useEffect(() => {
     if (isCollapsed) setMenuOpen(false)
   }, [isCollapsed])
 
-  // Active link indicator ke liye GSAP animation
   useLayoutEffect(() => {
     const activeLiIndex = memberSidebarNavItems.findIndex((item) =>
       location.pathname.startsWith(item.path),
     )
     const activeLi = liRefs.current[activeLiIndex]
 
-    // Animation sirf tab chalaye jab sidebar expanded ho aur desktop par ho
     if (activeLi && indicatorRef.current && !isCollapsed && !isMobile) {
       gsap.to(indicatorRef.current, {
         y: activeLi.offsetTop,
@@ -93,25 +89,30 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
     }
   }, [location.pathname, isCollapsed, isMobile])
 
-  // Mobile par link click karne par sidebar band karein
   const handleLinkClick = () => {
     if (isMobile) {
       setCollapsed(true)
     }
   }
 
-  // Mobile par sidebar ke bahar click karne par use band karein
   const closeSidebarOnBackdropClick = () => {
     setCollapsed(true)
   }
 
   const isSidebarVisible = isMobile ? !isCollapsed : true
-  // Mobile par sidebar hamesha expanded rehta hai jab visible ho
   const isCurrentlyExpanded = isMobile ? true : !isCollapsed
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return '?'
+    const names = name.split(' ')
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
 
   return (
     <>
-      {/* Backdrop for mobile view */}
       {isMobile && isSidebarVisible && (
         <div
           onClick={closeSidebarOnBackdropClick}
@@ -130,21 +131,14 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
           ${isCollapsed && !isMobile ? 'w-[72px]' : 'w-64'}
         `}
       >
-        {/* Header - Logo and Collapse Button */}
         <div
           className={`flex items-center transition-all duration-300 ${
             !isCurrentlyExpanded ? 'justify-center h-[76px]' : 'justify-between px-4 h-[76px]'
           }`}
         >
           {isCurrentlyExpanded && (
-            <img
-              src={Logo}
-              alt="Logo"
-              className="h-8 w-auto select-none pointer-events-none"
-              draggable={false}
-            />
+            <img src={Logo} alt="Logo" className="h-8 w-auto" draggable={false} />
           )}
-          {/* Collapse button sirf desktop par dikhega */}
           <button
             onClick={() => setCollapsed(!isCollapsed)}
             className="p-2 rounded-lg hover:bg-[rgb(var(--color-surface-2))] hidden md:inline-flex"
@@ -154,7 +148,6 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
           </button>
         </div>
 
-        {/* Navigation section */}
         <nav
           className="relative flex-1 overflow-y-auto custom-scrollbar min-h-0 overscroll-contain"
           style={{ scrollbarGutter: 'stable both-edges' } as any}
@@ -180,16 +173,17 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
                   end={item.path === '/member/home'}
                   onClick={handleLinkClick}
                   title={!isCurrentlyExpanded ? item.name : undefined}
-                  className={({ isActive }) => {
-                    const base =
-                      'flex items-center w-full rounded-lg transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-blue))]'
-                    const expanded = 'justify-start gap-3.5 px-3 py-2.5'
-                    const collapsed = 'justify-center h-12 w-12 rounded-xl'
-                    const state = isActive
-                      ? 'sb-active bg-[rgb(var(--color-surface-2))] text-[rgb(var(--color-text-primary))]'
-                      : 'text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] hover:text-[rgb(var(--color-text-primary))]'
-                    return `${base} ${!isCurrentlyExpanded ? collapsed : expanded} ${state}`
-                  }}
+                  className={({ isActive }) =>
+                    `flex items-center w-full rounded-lg transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-blue))] ${
+                      !isCurrentlyExpanded
+                        ? 'justify-center h-12 w-12 rounded-xl'
+                        : 'justify-start gap-3.5 px-3 py-2.5'
+                    } ${
+                      isActive
+                        ? 'sb-active bg-[rgb(var(--color-surface-2))] text-[rgb(var(--color-text-primary))]'
+                        : 'text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] hover:text-[rgb(var(--color-text-primary))]'
+                    }`
+                  }
                 >
                   <item.Icon className="text-2xl shrink-0" />
                   <span
@@ -204,7 +198,6 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
             ))}
           </ul>
 
-          {/* Recently Visited Section */}
           {isCurrentlyExpanded && (
             <div className="px-4 pt-6 animate-fadeIn">
               <h3 className="text-xs font-semibold text-[rgb(var(--color-text-muted))] uppercase tracking-wider px-3 mb-2">
@@ -229,9 +222,7 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
           )}
         </nav>
 
-        {/* Footer */}
         <div className="px-4 pb-4 pt-2 space-y-4 mt-auto">
-          {/* Become a Creator Card */}
           {isCurrentlyExpanded && isCreatorCardVisible && (
             <div className="bg-[rgb(var(--color-primary-blue))/10] border border-[rgb(var(--color-primary-blue))/20] p-4 rounded-xl text-left animate-fadeIn relative">
               <button
@@ -244,32 +235,41 @@ const MemberSidebar: React.FC<SidebarProps> = ({ isCollapsed, setCollapsed }) =>
               <p className="text-sm text-[rgb(var(--color-text-secondary))] mt-1 mb-3.5">
                 You're almost there! Complete your page and take it live.
               </p>
+              {/* === CHANGE IS HERE === */}
               <Link
-                to="/dashboard"
-                onClick={handleLinkClick} // Mobile par ispe click se bhi sidebar band ho
+                to="/auth-redirect?role=creator"
+                onClick={handleLinkClick}
                 className="w-full block text-center text-sm font-semibold bg-white text-black py-2 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Finish my page
+                Become a Creator
               </Link>
             </div>
           )}
 
-          {/* Profile Card */}
           <div
             className={`relative flex items-center ${
               !isCurrentlyExpanded ? 'justify-center' : 'gap-3'
             }`}
           >
-            <div className="w-10 h-10 rounded-full bg-[rgb(var(--color-primary-blue))] grid place-items-center text-white font-bold text-lg shrink-0">
-              t
+            <div className="w-10 h-10 rounded-full bg-[rgb(var(--color-primary-blue))] grid place-items-center text-white font-bold text-lg shrink-0 overflow-hidden">
+              {displayImageUrl ? (
+                <img
+                  src={displayImageUrl}
+                  alt={user?.fullName || 'User profile'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{getInitials(user?.fullName)}</span>
+              )}
             </div>
+
             <div
               className={`min-w-0 flex-1 transition-opacity duration-200 ${
                 !isCurrentlyExpanded ? 'opacity-0 w-0' : 'opacity-100'
               }`}
             >
               <div className="text-sm font-semibold text-[rgb(var(--color-text-primary))] truncate">
-                tools
+                {user?.fullName || 'User'}
               </div>
               <div className="text-xs text-[rgb(var(--color-text-muted))]">Member</div>
             </div>

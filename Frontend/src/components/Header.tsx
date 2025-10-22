@@ -184,6 +184,11 @@ const Header: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const leaveTimeout = useRef<number | null>(null)
 
+  const handleAuthIntent = (intent: 'creator' | 'member') => {
+    sessionStorage.setItem('authIntent', intent)
+    if (isMenuOpen) setIsMenuOpen(false)
+  }
+
   const openSearch = () => {
     setIsMenuOpen(false)
     setIsSearchOpen(true)
@@ -372,21 +377,26 @@ const Header: React.FC = () => {
         .dropdown-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #22d3ee; }
         .dropdown-scrollbar { scrollbar-width: thin; scrollbar-color: #06b6d4 transparent; }
       `}</style>
+
       <header
         ref={headerRef}
         className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent"
       >
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-5">
-          <div className="relative flex justify-between items-center h-20">
+          {/* GRID ensures perfect alignment: logo (L), nav (center), actions (R) */}
+          <div className="relative grid grid-cols-[auto_1fr_auto] items-center h-20 gap-4">
+            {/* LEFT: Logo */}
             <div className="flex-shrink-0">
               <Link to="/" className="flex items-center">
-                <img src={Logo} alt="" className="w-12" />
+                <img src={Logo} alt="" className="w-12 h-12 object-contain" />
                 <span className="ml-3 text-2xl font-bold text-white tracking-tight">
                   Vybzz Nation
                 </span>
               </Link>
             </div>
-            <nav className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+
+            {/* CENTER: Nav (desktop only) */}
+            <nav className="hidden lg:flex justify-center">
               <div
                 ref={navContainerRef}
                 className="flex items-center relative bg-slate-900/50 backdrop-blur-sm rounded-full p-1 shadow-lg shadow-black/20"
@@ -400,7 +410,7 @@ const Header: React.FC = () => {
                   >
                     <Link
                       to={item.href || '#'}
-                      className={`transition-colors duration-300 text-slate-200 group-hover:text-white font-medium`}
+                      className="transition-colors duration-300 text-slate-200 group-hover:text-white font-medium"
                     >
                       {item.label}
                     </Link>
@@ -411,36 +421,48 @@ const Header: React.FC = () => {
                 ))}
               </div>
             </nav>
-            <div className="hidden lg:flex items-center space-x-2 flex-shrink-0">
+
+            {/* RIGHT: Actions (desktop) — perfectly right-aligned & vertically centered */}
+            <div className="hidden lg:flex justify-end items-center gap-2">
               <Button
                 onClick={openSearch}
-                className="flex items-center p-2.5 text-slate-200 hover:text-white hover:bg-blue-500/10 font-medium rounded-full transition-colors duration-200"
+                aria-label="Open search"
+                className="flex items-center justify-center h-11 px-3 text-slate-200 hover:text-white hover:bg-blue-500/10 font-medium rounded-full transition-colors duration-200"
               >
                 <Search className="w-5 h-5" />
               </Button>
+
               <Link
-                to="/login"
-                className="text-slate-200 font-medium px-4 py-2 hover:text-white hover:bg-blue-500/10 rounded-full transition-colors duration-200"
+                to="/login?role=member"
+                onClick={() => handleAuthIntent('member')}
+                className="inline-flex items-center justify-center h-11 px-4 text-slate-200 font-medium rounded-full hover:text-white hover:bg-blue-500/10 transition-colors duration-200"
               >
                 Log in
               </Link>
+
               <Link
-                to="/login"
-                className="bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-semibold px-5 py-2.5 rounded-full hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transform transition-all duration-300"
+                to="/login?role=creator"
+                onClick={() => handleAuthIntent('creator')}
+                className="inline-flex items-center justify-center h-11 px-5 bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-semibold rounded-full shadow-sm"
               >
-                Get Started
+                Start as a Creator
               </Link>
             </div>
-            <button
-              className="lg:hidden p-2 text-slate-200"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label="Open menu"
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+
+            {/* RIGHT: Mobile menu button */}
+            <div className="lg:hidden justify-self-end">
+              <button
+                className="p-2 text-slate-200"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label="Open menu"
+              >
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* MOBILE MENU */}
         {isMenuOpen && (
           <div className="custom-scrollbar lg:hidden border-t border-slate-800 bg-black/90 backdrop-blur-md overflow-y-auto max-h-[calc(100vh-5rem)]">
             <div className="px-2 pt-4 pb-6 space-y-1">
@@ -498,7 +520,7 @@ const Header: React.FC = () => {
                   ) : (
                     <Link
                       to={item.href || '#'}
-                      className={`block px-4 py-3 rounded-lg text-white font-semibold transition-all duration-200 hover:bg-blue-500/10`}
+                      className="block px-4 py-3 rounded-lg text-white font-semibold transition-all duration-200 hover:bg-blue-500/10"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {item.label}
@@ -506,6 +528,8 @@ const Header: React.FC = () => {
                   )}
                 </div>
               ))}
+
+              {/* Mobile actions pinned to the bottom of the sheet */}
               <div className="flex flex-col gap-2 pt-4 border-t border-slate-800 mt-2 mx-2">
                 <Button
                   onClick={openSearch}
@@ -514,28 +538,28 @@ const Header: React.FC = () => {
                   <Search className="w-5 h-5" />
                   <span>Search</span>
                 </Button>
-                {/* === FIX START: Changed to Link component with correct path === */}
+
                 <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
+                  to="/login?role=member"
+                  onClick={() => handleAuthIntent('member')}
                   className="mobile-menu-item w-full text-center text-slate-200 font-medium px-4 py-3 hover:bg-blue-500/10 rounded-full"
                 >
                   Log in
                 </Link>
-                {/* === FIX START: Changed <a> to Link component === */}
+
                 <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
+                  to="/login?role=creator"
+                  onClick={() => handleAuthIntent('creator')}
                   className="mobile-menu-item w-full text-center bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-semibold px-5 py-3 rounded-full"
                 >
-                  Get Started
+                  Start as a Creator
                 </Link>
-                {/* === FIX END === */}
               </div>
             </div>
           </div>
         )}
       </header>
+
       <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   )

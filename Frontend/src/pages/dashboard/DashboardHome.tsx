@@ -1,5 +1,6 @@
-// src/pages/dashboard/DashboardHome.tsx
-import React, { useLayoutEffect, useRef, useState } from 'react'
+// === 1: UPDATED IMPORTS ===
+import React, { useLayoutEffect, useRef, useState, useMemo } from 'react'
+import { useQuery, useQueryClient } from 'react-query'
 import { gsap } from 'gsap'
 import {
   LuSparkles,
@@ -12,6 +13,10 @@ import {
   LuLink,
 } from 'react-icons/lu'
 import { FaPlayCircle, FaCheckCircle, FaRocket } from 'react-icons/fa'
+
+// Import our centralized API function and the Onboarding Modal
+import { getCurrentUser } from '../../api/apiClient.js'
+import { OnboardingModal } from '../../components/creator/OnboardingModal'
 
 /* ========= Types ========= */
 type TabKey = 'Home' | 'Collections' | 'Membership' | 'About'
@@ -26,7 +31,31 @@ export interface Collection {
   updatedAt: string
 }
 
-/* ========= Demo Data ========= */
+// API data types that match your backend schema
+interface CreatorProfile {
+  id: string
+  pageName: string
+  pageUrl: string
+  status: 'DRAFT' | 'ACTIVE'
+  profileImageUrl?: string | null
+  bannerUrl?: string | null
+  bio?: string | null
+  onboardingStep: number
+  youtubeUrl?: string
+  instagramUrl?: string
+  // ... other social links
+}
+
+interface UserData {
+  id: string
+  clerkId: string
+  email: string
+  name: string | null
+  imageUrl: string | null
+  creatorProfile: CreatorProfile | null
+}
+
+/* ========= Demo Data (Unchanged) ========= */
 const demoCollections: Collection[] = [
   {
     id: 'c1',
@@ -66,7 +95,7 @@ const demoCollections: Collection[] = [
   },
 ]
 
-/* ========= Small UI Bits ========= */
+/* ========= Small UI Bits (Unchanged) ========= */
 const StatCard: React.FC<{
   icon: React.ComponentType<{ className?: string }>
   label: string
@@ -101,7 +130,7 @@ const StatCard: React.FC<{
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 flex items-center gap-4 shadow-sm"
+      className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 flex items-center gap-4 shadow-sm stat-card"
     >
       <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-surface-3))] shrink-0">
         <Icon className="text-[rgb(var(--color-text-primary))] text-xl" />
@@ -132,14 +161,19 @@ const ChecklistItem: React.FC<{ done?: boolean; children: React.ReactNode }> = (
         }
       />
     </div>
-    <div className="text-sm text-[rgb(var(--color-text-secondary))]">{children}</div>
+    <div
+      className={`text-sm ${
+        done ? 'text-[rgb(var(--color-text-primary))]' : 'text-[rgb(var(--color-text-secondary))]'
+      }`}
+    >
+      {children}
+    </div>
   </div>
 )
 
-/* ========= Collections Panel (inline so file is self-contained) ========= */
+/* ========= Collections Panel (Unchanged) ========= */
 const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null)
-
   const toggle = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
   }
@@ -154,7 +188,6 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
           <LuPlus /> New collection
         </button>
       </div>
-
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {items.map((c) => (
           <div
@@ -182,8 +215,6 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
                   {expandedId === c.id ? 'Hide' : 'View'}
                 </button>
               </div>
-
-              {/* Expanded posts preview */}
               {expandedId === c.id && (
                 <div className="mt-4 space-y-2">
                   {[1, 2, 3].map((i) => (
@@ -220,6 +251,7 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
 /* ========= Main Screen ========= */
 const DashboardHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('Home')
+  const [isSetupModalOpen, setSetupModalOpen] = useState(false)
 
   const statusBarRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLDivElement | null>(null)
@@ -227,8 +259,32 @@ const DashboardHome: React.FC = () => {
   const checklistRef = useRef<HTMLDivElement | null>(null)
   const tabsRef = useRef<HTMLDivElement | null>(null)
 
-  // Entrance animations
+  const queryClient = useQueryClient()
+
+  const {
+    data: user,
+    isLoading,
+    isError,
+  } = useQuery<UserData, Error>('currentUser', getCurrentUser, { refetchOnWindowFocus: false })
+
+  const checklistItems = useMemo(() => {
+    const profile = user?.creatorProfile
+    if (!profile) return []
+
+    return [
+      { label: 'Set your page name', done: !!profile.pageName },
+      { label: 'Add a profile photo', done: !!profile.profileImageUrl },
+      { label: 'Describe your page', done: !!profile.bio && profile.bio.length > 10 },
+      { label: 'Publish your page', done: profile.status === 'ACTIVE' },
+      { label: 'Promote your page', done: false },
+    ]
+  }, [user])
+
+  const completedCount = checklistItems.filter((item) => item.done).length
+
+  // Entrance animations (Unchanged)
   useLayoutEffect(() => {
+    if (isLoading || isError) return
     const ctx = gsap.context(() => {
       if (statusBarRef.current) {
         gsap.from(statusBarRef.current, { y: -12, opacity: 0, duration: 0.4, ease: 'power2.out' })
@@ -264,9 +320,9 @@ const DashboardHome: React.FC = () => {
       }
     })
     return () => ctx.revert()
-  }, [])
+  }, [isLoading, isError])
 
-  // Animated tab indicator (alignment fixed)
+  // Animated tab indicator (Unchanged)
   useLayoutEffect(() => {
     if (!tabsRef.current) return
     const underline = tabsRef.current.querySelector<HTMLDivElement>('.tab-indicator')
@@ -274,11 +330,8 @@ const DashboardHome: React.FC = () => {
       `button[data-tab="${activeTab}"]`,
     )
     if (!underline || !activeBtn) return
-
-    // Use offsetLeft/offsetWidth relative to the same positioned parent for perfect alignment
     const x = activeBtn.offsetLeft
     const w = activeBtn.offsetWidth
-
     if (!underline.style.transform) {
       gsap.set(underline, { x, width: w, autoAlpha: 1 })
     } else {
@@ -286,76 +339,100 @@ const DashboardHome: React.FC = () => {
     }
   }, [activeTab])
 
-  return (
-    <div className="space-y-6">
-      {/* STATUS BAR */}
-      <div
-        ref={statusBarRef}
-        className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
-      >
-        <div className="text-sm text-center sm:text-left text-[rgb(var(--color-text-secondary))]">
-          <span className="text-[rgb(var(--color-text-primary))] font-medium">
-            Your page is not yet published
-          </span>
-        </div>
-        <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch gap-2">
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-text-primary))] bg-[rgb(var(--color-surface-3))] hover:bg-[rgb(var(--color-surface-3))]/90 transition"
-            onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
-            onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
-          >
-            <LuEye />
-            Preview page
-          </button>
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
-            onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
-            onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
-          >
-            <FaRocket />
-            Publish page
-          </button>
+  // Loading and Error States
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg text-[rgb(var(--color-text-secondary))]">
+          Loading your dashboard...
         </div>
       </div>
+    )
+  }
 
-      {/* HERO */}
+  if (isError || !user || !user.creatorProfile) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[rgb(var(--color-surface-1))]">
+        <div className="text-center p-8 rounded-2xl bg-[rgb(var(--color-surface-2))]">
+          <div className="text-lg font-semibold text-red-500">Oops! Something went wrong.</div>
+          <p className="text-[rgb(var(--color-text-muted))] mt-2">
+            We couldn't load your dashboard data. Please try refreshing the page.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const { creatorProfile } = user
+
+  return (
+    <div className="space-y-6">
+      {/* STATUS BAR (Now Conditional) */}
+      {creatorProfile.status === 'DRAFT' && (
+        <div
+          ref={statusBarRef}
+          className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+        >
+          <div className="text-sm text-center sm:text-left text-[rgb(var(--color-text-secondary))]">
+            <span className="text-[rgb(var(--color-text-primary))] font-medium">
+              Your page is not yet published
+            </span>
+          </div>
+          <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch gap-2">
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-text-primary))] bg-[rgb(var(--color-surface-3))] hover:bg-[rgb(var(--color-surface-3))]/90 transition"
+              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
+              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
+            >
+              <LuEye /> Preview page
+            </button>
+            <button
+              onClick={() => setSetupModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
+              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
+              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
+            >
+              <FaRocket /> Publish page
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* HERO (Now Dynamic) */}
       <div
         ref={heroRef}
         className="relative overflow-hidden rounded-3xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))]"
       >
         <div
-          className="h-40 w-full"
+          className="h-40 w-full bg-cover bg-center"
           style={{
-            background:
-              'radial-gradient(1200px 300px at 20% -10%, rgba(233,100,36,0.5), transparent 60%), radial-gradient(1200px 300px at 80% -10%, rgba(236,72,153,0.45), transparent 60%), linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(15,23,42,0.65) 100%)',
+            backgroundImage: creatorProfile.bannerUrl
+              ? `url(${creatorProfile.bannerUrl})`
+              : 'radial-gradient(1200px 300px at 20% -10%, rgba(233,100,36,0.5), transparent 60%), radial-gradient(1200px 300px at 80% -10%, rgba(236,72,153,0.45), transparent 60%)',
           }}
         />
-
         <div className="px-4 sm:px-6 pb-5 pt-4 bg-[rgb(var(--color-surface-1))] flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-x-6 gap-y-4">
-          <div className="-mt-12">
-            <div
-              className="w-20 h-20 rounded-2xl grid place-items-center text-3xl font-bold text-white shadow-lg"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(236,72,153,1) 0%, rgba(233,100,36,1) 100%)',
-              }}
-            >
-              M
-            </div>
+          <div className="-mt-16 md:-mt-20">
+            <img
+              src={
+                creatorProfile.profileImageUrl ||
+                user.imageUrl ||
+                `https://ui-avatars.com/api/?name=${user.name || '?'}&background=random`
+              }
+              alt={user.name || 'User Avatar'}
+              className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover shadow-lg border-4 border-[rgb(var(--color-surface-1))]"
+            />
           </div>
-
           <div className="min-w-0">
             <div className="text-2xl font-semibold text-[rgb(var(--color-text-primary))]">
-              Muhammad Hussain
+              {creatorProfile.pageName || user.name || 'Unnamed Creator'}
             </div>
             <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-muted))] break-all">
               <LuLink className="shrink-0" />
-              patreon.com/MuhammadHussain415
+              {`vybzz.com/${creatorProfile.pageUrl}`}
             </div>
           </div>
-
           <div className="hidden md:block flex-1" />
-
           <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch md:items-center gap-2">
             <button
               className="inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
@@ -380,8 +457,6 @@ const DashboardHome: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Tabs */}
         <div ref={tabsRef} className="px-4 sm:px-6 pb-4 pt-2 overflow-x-auto">
           <div className="relative inline-flex items-center gap-2 rounded-full bg-[rgb(var(--color-surface-2))] p-1 border border-[rgb(var(--color-surface-3))]">
             <div
@@ -411,25 +486,16 @@ const DashboardHome: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6" ref={gridRef}>
           <div className="xl:col-span-2 space-y-6">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="stat-card">
-                <StatCard icon={LuUsers} label="Active patrons" value={150} />
-              </div>
-              <div className="stat-card">
-                <StatCard
-                  icon={LuDollarSign}
-                  label="Estimated monthly income"
-                  value={1200}
-                  prefix="$"
-                />
-              </div>
-              <div className="stat-card">
-                <StatCard icon={LuTrendingUp} label="30-day growth" value={18} suffix="%" />
-              </div>
-              <div className="stat-card">
-                <StatCard icon={FaPlayCircle} label="Last post views" value={842} />
-              </div>
+              <StatCard icon={LuUsers} label="Active patrons" value={150} />
+              <StatCard
+                icon={LuDollarSign}
+                label="Estimated monthly income"
+                value={1200}
+                prefix="$"
+              />
+              <StatCard icon={LuTrendingUp} label="30-day growth" value={18} suffix="%" />
+              <StatCard icon={FaPlayCircle} label="Last post views" value={842} />
             </div>
-
             <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 text-center lg:text-left">
               <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-primary-blue))]/15 shrink-0 mx-auto lg:mx-0">
                 <LuSparkles className="text-[rgb(var(--color-primary-blue))]" />
@@ -453,7 +519,6 @@ const DashboardHome: React.FC = () => {
               </button>
             </div>
           </div>
-
           <div
             ref={checklistRef}
             className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5"
@@ -462,16 +527,19 @@ const DashboardHome: React.FC = () => {
               <div className="text-lg font-semibold text-[rgb(var(--color-text-primary))]">
                 Welcome checklist
               </div>
-              <div className="text-xs text-[rgb(var(--color-text-muted))]">1 of 5 complete</div>
+              <div className="text-xs font-medium text-slate-300 bg-slate-700 px-2 py-1 rounded-full">
+                {completedCount} of {checklistItems.length} complete
+              </div>
             </div>
             <div className="space-y-4">
-              <ChecklistItem done>Add a profile photo</ChecklistItem>
-              <ChecklistItem>Describe your page</ChecklistItem>
-              <ChecklistItem>Make your first post</ChecklistItem>
-              <ChecklistItem>Publish your page</ChecklistItem>
-              <ChecklistItem>Promote your page</ChecklistItem>
+              {checklistItems.map((item, index) => (
+                <ChecklistItem key={index} done={item.done}>
+                  {item.label}
+                </ChecklistItem>
+              ))}
             </div>
             <button
+              onClick={() => setSetupModalOpen(true)}
               className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
               onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
               onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
@@ -483,18 +551,27 @@ const DashboardHome: React.FC = () => {
       )}
 
       {activeTab === 'Collections' && <CollectionsPanel items={demoCollections} />}
-
       {activeTab === 'Membership' && (
         <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-6 text-[rgb(var(--color-text-secondary))]">
           Membership builder coming soon — tiers, perks, trials, and more.
         </div>
       )}
-
       {activeTab === 'About' && (
         <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-6 text-[rgb(var(--color-text-secondary))]">
           Add details about yourself, your work, and why people should join.
         </div>
       )}
+
+      {/* RENDER THE MODAL */}
+      <OnboardingModal
+        open={isSetupModalOpen}
+        onOpenChange={setSetupModalOpen}
+        userProfile={creatorProfile}
+        onFinished={() => {
+          setSetupModalOpen(false)
+          queryClient.invalidateQueries('currentUser')
+        }}
+      />
     </div>
   )
 }
