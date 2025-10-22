@@ -7,7 +7,7 @@ const { uploadToCloudinary } = require('../utils/cloudinary')
 const WEBHOOK_SECRET =
   process.env.CLERK_WEBHOOK_SIGNING_SECRET || 'whsec_xeTb2X35/E+kbYPVLIU5ut6x8ND3bzzb'
 
-// Debug bypass .env file se control hoga
+// Debug bypass controlled by .env file
 const DEBUG_BYPASS = String(process.env.DEBUG_WEBHOOK_BYPASS_VERIFY || '').toLowerCase() === 'true'
 
 if (DEBUG_BYPASS) {
@@ -17,7 +17,7 @@ if (DEBUG_BYPASS) {
   console.warn('**************************************************')
 }
 
-// Helper functions (inmein koi change nahi)
+// Helper functions (no changes)
 const getPrimaryEmail = (data) => {
   const list = data?.email_addresses || []
   const e = list.find((x) => x.id === data?.primary_email_address_id) || list[0]
@@ -33,7 +33,7 @@ const createUrlSlug = (name) => {
     .slice(0, 50)
 }
 
-// Clerk webhook handler - Naya aur behtar version debugging ke liye
+// Clerk webhook handler with enhanced debugging
 const handleClerkWebhook = async (req, res) => {
   console.log('--- [Webhook Handler Called] ---')
 
@@ -43,7 +43,6 @@ const handleClerkWebhook = async (req, res) => {
       return res.status(500).send('Webhook secret not configured')
     }
 
-    // DEBUG: Aane wale headers ko log karein
     console.log('[Webhook] Headers Received:', {
       'svix-id': req.headers['svix-id'],
       'svix-timestamp': req.headers['svix-timestamp'],
@@ -52,7 +51,6 @@ const handleClerkWebhook = async (req, res) => {
       'content-length': req.headers['content-length'],
     })
 
-    // DEBUG: Raw body ke buffer ki length check karein
     const payloadBuffer = req.body
     if (!Buffer.isBuffer(payloadBuffer)) {
       console.error(
@@ -71,7 +69,6 @@ const handleClerkWebhook = async (req, res) => {
     let evt
 
     if (!DEBUG_BYPASS) {
-      // --- NORMAL PRODUCTION LOGIC ---
       console.log('[Webhook] Verifying signature...')
       const svix_id = req.headers['svix-id']
       const svix_timestamp = req.headers['svix-timestamp']
@@ -94,7 +91,6 @@ const handleClerkWebhook = async (req, res) => {
         return res.status(400).send('Error: Webhook signature verification failed')
       }
     } else {
-      // --- DEBUG BYPASS LOGIC ---
       console.log('[Webhook] DEBUG MODE: Bypassing signature verification.')
       try {
         evt = JSON.parse(payloadString)
@@ -108,7 +104,6 @@ const handleClerkWebhook = async (req, res) => {
     const { type, data } = evt
     console.log(`[Webhook] Event Type: ${type}, User ID: ${data?.id}`)
 
-    // Database operations
     if (type === 'user.created' || type === 'user.updated') {
       const email = getPrimaryEmail(data)
       if (!email) {
@@ -146,15 +141,13 @@ const handleClerkWebhook = async (req, res) => {
   }
 }
 
-// --- Baaki Saare Functions Jese The Wese Hi Rahenge ---
+// --- Other Controller Functions (No Changes) ---
 
-// List all users
 const listUsers = async (_req, res) => {
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } })
   res.json(users)
 }
 
-// Get a single user by Clerk ID
 const getUserByClerkId = async (req, res) => {
   const user = await prisma.user.findUnique({ where: { clerkId: req.params.clerkId } })
   if (!user) return res.status(404).json({ error: 'Not found' })

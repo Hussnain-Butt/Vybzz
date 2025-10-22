@@ -11,16 +11,19 @@ import {
   LuEye,
   LuPlus,
   LuLink,
+  LuCamera,
 } from 'react-icons/lu'
 import { FaPlayCircle, FaCheckCircle, FaRocket } from 'react-icons/fa'
+import toast, { Toaster } from 'react-hot-toast'
 
-// Import our centralized API function and the Onboarding Modal
-import { getCurrentUser } from '../../api/apiClient.js'
+// Import our centralized API functions and components
+import { getCurrentUser, uploadImages } from '../../api/apiClient.js'
 import { OnboardingModal } from '../../components/creator/OnboardingModal'
+import { BannerCropModal } from '../../components/creator/BannerCropModal'
+import { ProfileCropModal } from '../../components/creator/ProfileCropModal'
 
-/* ========= Types ========= */
+/* ========= Types (Unchanged) ========= */
 type TabKey = 'Home' | 'Collections' | 'Membership' | 'About'
-
 export interface Collection {
   id: string
   title: string
@@ -30,8 +33,6 @@ export interface Collection {
   members: number
   updatedAt: string
 }
-
-// API data types that match your backend schema
 interface CreatorProfile {
   id: string
   pageName: string
@@ -43,9 +44,7 @@ interface CreatorProfile {
   onboardingStep: number
   youtubeUrl?: string
   instagramUrl?: string
-  // ... other social links
 }
-
 interface UserData {
   id: string
   clerkId: string
@@ -105,7 +104,6 @@ const StatCard: React.FC<{
 }> = ({ icon: Icon, label, value, prefix = '', suffix = '' }) => {
   const cardRef = useRef<HTMLDivElement | null>(null)
   const numRef = useRef<HTMLSpanElement | null>(null)
-
   useLayoutEffect(() => {
     if (!cardRef.current) return
     const ctx = gsap.context(() => {
@@ -126,7 +124,6 @@ const StatCard: React.FC<{
     }, cardRef)
     return () => ctx.revert()
   }, [value, prefix, suffix])
-
   return (
     <div
       ref={cardRef}
@@ -144,7 +141,6 @@ const StatCard: React.FC<{
     </div>
   )
 }
-
 const ChecklistItem: React.FC<{ done?: boolean; children: React.ReactNode }> = ({
   done,
   children,
@@ -152,14 +148,10 @@ const ChecklistItem: React.FC<{ done?: boolean; children: React.ReactNode }> = (
   <div className="flex items-start gap-3">
     <div
       className={`mt-0.5 rounded-full p-1 ${
-        done ? 'bg-[rgb(var(--color-primary-blue))]/20' : 'bg-[rgb(var(--color-surface-3))]'
+        done ? 'bg-sky-500/20' : 'bg-[rgb(var(--color-surface-3))]'
       }`}
     >
-      <FaCheckCircle
-        className={
-          done ? 'text-[rgb(var(--color-primary-blue))]' : 'text-[rgb(var(--color-text-muted))]'
-        }
-      />
+      <FaCheckCircle className={done ? 'text-sky-500' : 'text-[rgb(var(--color-text-muted))]'} />
     </div>
     <div
       className={`text-sm ${
@@ -170,14 +162,11 @@ const ChecklistItem: React.FC<{ done?: boolean; children: React.ReactNode }> = (
     </div>
   </div>
 )
-
-/* ========= Collections Panel (Unchanged) ========= */
 const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const toggle = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
   }
-
   return (
     <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
@@ -252,6 +241,15 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
 const DashboardHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('Home')
   const [isSetupModalOpen, setSetupModalOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
+  const [bannerCropModalOpen, setBannerCropModalOpen] = useState(false)
+  const [imageToCropForBanner, setImageToCropForBanner] = useState<string | null>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
+
+  const [profileCropModalOpen, setProfileCropModalOpen] = useState(false)
+  const [imageToCropForProfile, setImageToCropForProfile] = useState<string | null>(null)
+  const profileInputRef = useRef<HTMLInputElement>(null)
 
   const statusBarRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLDivElement | null>(null)
@@ -265,8 +263,69 @@ const DashboardHome: React.FC = () => {
     data: user,
     isLoading,
     isError,
-  } = useQuery<UserData, Error>('currentUser', getCurrentUser, { refetchOnWindowFocus: false })
+  } = useQuery<UserData, Error>('currentUser', getCurrentUser, {
+    refetchOnWindowFocus: false,
+  })
 
+  const readFileAsDataURL = (file: File, callback: (result: string) => void) => {
+    const reader = new FileReader()
+    reader.onload = () => callback(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      readFileAsDataURL(e.target.files[0], (img) => {
+        setImageToCropForBanner(img)
+        setBannerCropModalOpen(true)
+      })
+    }
+    e.target.value = ''
+  }
+  const handleUploadCroppedBanner = async (croppedBlob: Blob) => {
+    setIsUploading(true)
+    const toastId = toast.loading('Uploading banner...')
+    const formData = new FormData()
+    formData.append('bannerImage', croppedBlob, 'banner.jpg')
+    try {
+      await uploadImages(formData)
+      toast.success('Banner updated!', { id: toastId })
+      await queryClient.invalidateQueries('currentUser')
+    } catch (error) {
+      toast.error('Upload failed. Please try again.', { id: toastId })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+  const triggerBannerUpload = () => bannerInputRef.current?.click()
+
+  const handleProfileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      readFileAsDataURL(e.target.files[0], (img) => {
+        setImageToCropForProfile(img)
+        setProfileCropModalOpen(true)
+      })
+    }
+    e.target.value = ''
+  }
+  const handleUploadCroppedProfileImage = async (croppedBlob: Blob) => {
+    setIsUploading(true)
+    const toastId = toast.loading('Uploading photo...')
+    const formData = new FormData()
+    formData.append('profileImage', croppedBlob, 'profile.jpg')
+    try {
+      await uploadImages(formData)
+      toast.success('Profile photo updated!', { id: toastId })
+      await queryClient.invalidateQueries('currentUser')
+    } catch (error) {
+      toast.error('Upload failed. Please try again.', { id: toastId })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+  const triggerProfileUpload = () => profileInputRef.current?.click()
+
+  // === CHECKLIST LOGIC UPDATED ===
   const checklistItems = useMemo(() => {
     const profile = user?.creatorProfile
     if (!profile) return []
@@ -274,15 +333,15 @@ const DashboardHome: React.FC = () => {
     return [
       { label: 'Set your page name', done: !!profile.pageName },
       { label: 'Add a profile photo', done: !!profile.profileImageUrl },
+      { label: 'Add a banner image', done: !!profile.bannerUrl }, // New step added
       { label: 'Describe your page', done: !!profile.bio && profile.bio.length > 10 },
       { label: 'Publish your page', done: profile.status === 'ACTIVE' },
-      { label: 'Promote your page', done: false },
+      { label: 'Promote your page', done: false }, // This can be updated with real logic later
     ]
   }, [user])
 
   const completedCount = checklistItems.filter((item) => item.done).length
 
-  // Entrance animations (Unchanged)
   useLayoutEffect(() => {
     if (isLoading || isError) return
     const ctx = gsap.context(() => {
@@ -321,43 +380,30 @@ const DashboardHome: React.FC = () => {
     })
     return () => ctx.revert()
   }, [isLoading, isError])
-
-  // Animated tab indicator (Unchanged)
   useLayoutEffect(() => {
     if (!tabsRef.current) return
-    const underline = tabsRef.current.querySelector<HTMLDivElement>('.tab-indicator')
-    const activeBtn = tabsRef.current.querySelector<HTMLButtonElement>(
-      `button[data-tab="${activeTab}"]`,
-    )
-    if (!underline || !activeBtn) return
-    const x = activeBtn.offsetLeft
-    const w = activeBtn.offsetWidth
-    if (!underline.style.transform) {
-      gsap.set(underline, { x, width: w, autoAlpha: 1 })
+    const u = tabsRef.current.querySelector<HTMLDivElement>('.tab-indicator')
+    const a = tabsRef.current.querySelector<HTMLButtonElement>(`button[data-tab="${activeTab}"]`)
+    if (!u || !a) return
+    if (!u.style.transform) {
+      gsap.set(u, { x: a.offsetLeft, width: a.offsetWidth, autoAlpha: 1 })
     } else {
-      gsap.to(underline, { x, width: w, duration: 0.25, ease: 'power2.out' })
+      gsap.to(u, { x: a.offsetLeft, width: a.offsetWidth, duration: 0.25, ease: 'power2.out' })
     }
   }, [activeTab])
 
-  // Loading and Error States
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-[rgb(var(--color-text-secondary))]">
-          Loading your dashboard...
-        </div>
+        <div className="text-lg text-[rgb(var(--color-text-secondary))]">Loading...</div>
       </div>
     )
   }
-
   if (isError || !user || !user.creatorProfile) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[rgb(var(--color-surface-1))]">
-        <div className="text-center p-8 rounded-2xl bg-[rgb(var(--color-surface-2))]">
-          <div className="text-lg font-semibold text-red-500">Oops! Something went wrong.</div>
-          <p className="text-[rgb(var(--color-text-muted))] mt-2">
-            We couldn't load your dashboard data. Please try refreshing the page.
-          </p>
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center p-8">
+          <div className="text-lg text-red-500">Error loading dashboard.</div>
         </div>
       </div>
     )
@@ -367,98 +413,119 @@ const DashboardHome: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* STATUS BAR (Now Conditional) */}
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            background: 'rgb(var(--color-surface-3))',
+            color: 'rgb(var(--color-text-primary))',
+          },
+        }}
+      />
       {creatorProfile.status === 'DRAFT' && (
         <div
           ref={statusBarRef}
           className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
         >
           <div className="text-sm text-center sm:text-left text-[rgb(var(--color-text-secondary))]">
-            <span className="text-[rgb(var(--color-text-primary))] font-medium">
+            <span className="font-medium text-[rgb(var(--color-text-primary))]">
               Your page is not yet published
             </span>
           </div>
-          <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch gap-2">
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-text-primary))] bg-[rgb(var(--color-surface-3))] hover:bg-[rgb(var(--color-surface-3))]/90 transition"
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
-            >
-              <LuEye /> Preview page
+          <div className="w-full sm:w-auto sm:ml-auto flex gap-2">
+            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 bg-[rgb(var(--color-surface-3))]">
+              <LuEye /> Preview
             </button>
             <button
               onClick={() => setSetupModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.18 })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.18 })}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 bg-white text-black"
             >
-              <FaRocket /> Publish page
+              <FaRocket /> Publish
             </button>
           </div>
         </div>
       )}
 
-      {/* HERO (Now Dynamic) */}
       <div
         ref={heroRef}
         className="relative overflow-hidden rounded-3xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))]"
       >
-        <div
-          className="h-40 w-full bg-cover bg-center"
-          style={{
-            backgroundImage: creatorProfile.bannerUrl
-              ? `url(${creatorProfile.bannerUrl})`
-              : 'radial-gradient(1200px 300px at 20% -10%, rgba(233,100,36,0.5), transparent 60%), radial-gradient(1200px 300px at 80% -10%, rgba(236,72,153,0.45), transparent 60%)',
-          }}
+        <div className="relative group">
+          <div
+            className="h-40 w-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${creatorProfile.bannerUrl || ''})` }}
+          />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <button
+              onClick={triggerBannerUpload}
+              disabled={isUploading}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-lg backdrop-blur-sm hover:bg-white/30 transition disabled:opacity-50"
+            >
+              <LuCamera size={16} />
+              <span>{isUploading ? 'Uploading...' : 'Change Banner'}</span>
+            </button>
+          </div>
+        </div>
+        <input
+          type="file"
+          ref={bannerInputRef}
+          onChange={handleBannerFileChange}
+          className="hidden"
+          accept="image/*"
         />
-        <div className="px-4 sm:px-6 pb-5 pt-4 bg-[rgb(var(--color-surface-1))] flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-x-6 gap-y-4">
-          <div className="-mt-16 md:-mt-20">
+        <input
+          type="file"
+          ref={profileInputRef}
+          onChange={handleProfileFileChange}
+          className="hidden"
+          accept="image/*"
+        />
+
+        <div className="px-4 sm:px-6 pb-5 pt-4 bg-[rgb(var(--color-surface-1))] flex flex-col md:flex-row items-start gap-x-6 gap-y-4">
+          <div className="relative -mt-16 md:-mt-20 group">
             <img
               src={
                 creatorProfile.profileImageUrl ||
                 user.imageUrl ||
-                `https://ui-avatars.com/api/?name=${user.name || '?'}&background=random`
+                `https://ui-avatars.com/api/?name=${user.name || '?'}`
               }
-              alt={user.name || 'User Avatar'}
+              alt="Avatar"
               className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover shadow-lg border-4 border-[rgb(var(--color-surface-1))]"
             />
-          </div>
-          <div className="min-w-0">
-            <div className="text-2xl font-semibold text-[rgb(var(--color-text-primary))]">
-              {creatorProfile.pageName || user.name || 'Unnamed Creator'}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
+              <button
+                onClick={triggerProfileUpload}
+                disabled={isUploading}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white/20 text-white text-xs rounded-lg backdrop-blur-sm hover:bg-white/30 transition disabled:opacity-50"
+              >
+                <LuCamera size={14} />
+                <span>Change</span>
+              </button>
             </div>
-            <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-muted))] break-all">
+          </div>
+
+          <div className="min-w-0">
+            <div className="text-2xl font-semibold">{creatorProfile.pageName || user.name}</div>
+            <div className="flex items-center gap-2 text-sm text-sky-400">
               <LuLink className="shrink-0" />
               {`vybzz.com/${creatorProfile.pageUrl}`}
             </div>
           </div>
           <div className="hidden md:block flex-1" />
-          <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch md:items-center gap-2">
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
-            >
-              <LuEye /> Preview
+          <div className="w-full md:w-auto flex gap-2">
+            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2.5 border border-[rgb(var(--color-surface-3))]">
+              <LuEye />
             </button>
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow"
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
-            >
-              <LuShare2 /> Share
+            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2.5 bg-white text-black">
+              <LuShare2 />
             </button>
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-[rgb(var(--color-primary-blue))] text-white hover:bg-[rgb(var(--color-accent-pink))] transition shadow"
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
-            >
-              <LuPlus /> Create
+            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2.5 bg-sky-500 text-white">
+              <LuPlus />
             </button>
           </div>
         </div>
         <div ref={tabsRef} className="px-4 sm:px-6 pb-4 pt-2 overflow-x-auto">
-          <div className="relative inline-flex items-center gap-2 rounded-full bg-[rgb(var(--color-surface-2))] p-1 border border-[rgb(var(--color-surface-3))]">
+          <div className="relative inline-flex items-center gap-2 rounded-full bg-[rgb(var(--color-surface-2))] p-1 border-[rgb(var(--color-surface-3))]">
             <div
               className="tab-indicator absolute inset-y-1 rounded-full bg-[rgb(var(--color-surface-3))] opacity-0 pointer-events-none"
               style={{ willChange: 'transform, width' }}
@@ -468,10 +535,8 @@ const DashboardHome: React.FC = () => {
                 key={t}
                 data-tab={t}
                 onClick={() => setActiveTab(t)}
-                className={`relative z-10 rounded-full px-4 py-2 text-sm leading-none transition whitespace-nowrap ${
-                  activeTab === t
-                    ? 'text-[rgb(var(--color-text-primary))]'
-                    : 'text-[rgb(var(--color-text-secondary))] hover:text-[rgb(var(--color-text-primary))]'
+                className={`relative z-10 rounded-full px-4 py-2 text-sm transition ${
+                  activeTab === t ? 'text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {t}
@@ -481,88 +546,56 @@ const DashboardHome: React.FC = () => {
         </div>
       </div>
 
-      {/* CONTENT */}
       {activeTab === 'Home' && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6" ref={gridRef}>
           <div className="xl:col-span-2 space-y-6">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard icon={LuUsers} label="Active patrons" value={150} />
-              <StatCard
-                icon={LuDollarSign}
-                label="Estimated monthly income"
-                value={1200}
-                prefix="$"
-              />
+              <StatCard icon={LuDollarSign} label="Monthly income" value={1200} prefix="$" />
               <StatCard icon={LuTrendingUp} label="30-day growth" value={18} suffix="%" />
               <StatCard icon={FaPlayCircle} label="Last post views" value={842} />
             </div>
-            <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 text-center lg:text-left">
-              <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-primary-blue))]/15 shrink-0 mx-auto lg:mx-0">
-                <LuSparkles className="text-[rgb(var(--color-primary-blue))]" />
+            <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5 flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl grid place-items-center bg-sky-500/15 shrink-0">
+                <LuSparkles className="text-sky-500" />
               </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-[rgb(var(--color-text-primary))]">
-                  Grow your creative business
-                </div>
-                <div className="text-sm text-[rgb(var(--color-text-secondary))]">
-                  Add a welcome post and set up your first membership tier to start earning
-                  recurring income.
-                </div>
+              <div className="flex-1">
+                <div className="font-semibold">Grow your business</div>
+                <div className="text-sm text-slate-400">Add posts and set up membership tiers.</div>
               </div>
-              <div className="hidden lg:block flex-1" />
-              <button
-                className="rounded-xl px-3.5 py-2.5 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow w-full lg:w-auto"
-                onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
-                onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
-              >
-                Get started
-              </button>
+              <button className="rounded-xl px-3.5 py-2.5 bg-white text-black">Get started</button>
             </div>
           </div>
           <div
             ref={checklistRef}
             className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div className="text-lg font-semibold text-[rgb(var(--color-text-primary))]">
-                Welcome checklist
-              </div>
-              <div className="text-xs font-medium text-slate-300 bg-slate-700 px-2 py-1 rounded-full">
-                {completedCount} of {checklistItems.length} complete
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="text-lg font-semibold">Welcome checklist</div>
+              <div className="text-xs bg-slate-700 px-2 py-1 rounded-full">
+                {completedCount} of {checklistItems.length}
               </div>
             </div>
             <div className="space-y-4">
-              {checklistItems.map((item, index) => (
-                <ChecklistItem key={index} done={item.done}>
+              {checklistItems.map((item, i) => (
+                <ChecklistItem key={i} done={item.done}>
                   {item.label}
                 </ChecklistItem>
               ))}
             </div>
             <button
               onClick={() => setSetupModalOpen(true)}
-              className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 border border-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-surface-2))] transition"
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -2, duration: 0.2 })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.2 })}
+              className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl p-2.5 border border-[rgb(var(--color-surface-3))]"
             >
               <FaPlayCircle /> Continue setup
             </button>
           </div>
         </div>
       )}
-
       {activeTab === 'Collections' && <CollectionsPanel items={demoCollections} />}
-      {activeTab === 'Membership' && (
-        <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-6 text-[rgb(var(--color-text-secondary))]">
-          Membership builder coming soon — tiers, perks, trials, and more.
-        </div>
-      )}
-      {activeTab === 'About' && (
-        <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-6 text-[rgb(var(--color-text-secondary))]">
-          Add details about yourself, your work, and why people should join.
-        </div>
-      )}
+      {activeTab === 'Membership' && <div className="p-6">Membership page coming soon.</div>}
+      {activeTab === 'About' && <div className="p-6">About page editor coming soon.</div>}
 
-      {/* RENDER THE MODAL */}
       <OnboardingModal
         open={isSetupModalOpen}
         onOpenChange={setSetupModalOpen}
@@ -571,6 +604,18 @@ const DashboardHome: React.FC = () => {
           setSetupModalOpen(false)
           queryClient.invalidateQueries('currentUser')
         }}
+      />
+      <BannerCropModal
+        imageSrc={imageToCropForBanner}
+        open={bannerCropModalOpen}
+        onOpenChange={setBannerCropModalOpen}
+        onCropComplete={handleUploadCroppedBanner}
+      />
+      <ProfileCropModal
+        imageSrc={imageToCropForProfile}
+        open={profileCropModalOpen}
+        onOpenChange={setProfileCropModalOpen}
+        onCropComplete={handleUploadCroppedProfileImage}
       />
     </div>
   )

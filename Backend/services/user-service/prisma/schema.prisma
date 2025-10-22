@@ -20,7 +20,7 @@ model User {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   
-  // Relation ka naam wahi rehne diya hai jo aapne provide kiya
+  // Relation name remains the same
   creatorProfile CreatorProfile? @relation("UserCreatorProfile")
 
   @@index([email])
@@ -33,11 +33,11 @@ model CreatorProfile {
   pageUrl      String   @unique
   status       String   @default("DRAFT") // 'DRAFT', 'ACTIVE'
 
-  // === YEH FIELDS ADD KIYE GAYE HAIN ===
-  profileImageUrl String?  // Profile photo ke liye
-  bannerUrl       String?  // Dashboard ke banner ke liye
-  bio             String?  @db.Text // Page description ke liye, @db.Text lambe text ke liye behtar hai
-  onboardingStep  Int      @default(2) // Onboarding process track karne ke liye (Step 2 se shuru)
+  // === REQUIRED FIELDS ARE ALREADY HERE ===
+  profileImageUrl String?  // For the Profile photo
+  bannerUrl       String?  // For the new Cover photo step
+  bio             String?  @db.Text // For the page description
+  onboardingStep  Int      @default(2) // Tracks progress (Step 2 is the start)
 
   // Social Links
   youtubeUrl   String?
