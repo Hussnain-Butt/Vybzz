@@ -80,18 +80,21 @@ services:
       CLERK_WEBHOOK_SIGNING_SECRET: 'whsec_xeTb2X35/E+kbYPVLIU5ut6x8ND3bzzb'
       CLERK_SECRET_KEY: 'sk_test_0pqUaGtPfRk3MgllAFsqJCUCh0acO6OUEBKd7klwRn'
       CLERK_PUBLISHABLE_KEY: 'pk_test_d2VsY29tZS1kZWVyLTAuY2xlcmsuYWNjb3VudHMuZGV2JA'
-
-      # === YEH LINE ADD KI GAYI HAI DEBUGGING KE LIYE ===
-      DEBUG_WEBHOOK_BYPASS_VERIFY: 'true'
-
-      # === CLOUDINARY CONFIG ===
+      # Agar aapne debug mode on rakha tha, to ab usay hata sakte hain ya comment kar sakte hain
+      # DEBUG_WEBHOOK_BYPASS_VERIFY: 'true'
       CLOUDINARY_CLOUD_NAME: 'dxi6hlanc'
       CLOUDINARY_API_KEY: '373723696384711'
       CLOUDINARY_API_SECRET: 'gfJHpY8i2VM4h7ven7ym89jMF5w'
-
-      # === SERVICE CONFIG ===
       PORT: '3002'
       NODE_ENV: 'development'
+
+    # === YEH HAI FINAL NETWORK FIX ===
+    # Hum container ko Google ke DNS servers istemal karne ko keh rahe hain
+    # taake woh Cloudinary se aaram se connect ho sake.
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
     ports:
       - '3002:3002'
     depends_on:

@@ -18,8 +18,7 @@ app.set('trust proxy', 1)
 
 // --- CORS ko globally handle karein ---
 // Yeh browser ki OPTIONS (preflight) requests ko theek se handle karega
-// aur saare proxied requests ke liye bhi kaam karega. Yeh aapke purane
-// cors({ origin: true, credentials: true }) se behtar hai.
+// aur saare proxied requests ke liye bhi kaam karega.
 app.use(cors())
 
 // --- Global request logger ---
@@ -32,27 +31,25 @@ app.use((req, res, next) => {
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
 // -----------------------------
-// WEBHOOKS ko raw forward karne ka behtar aur SAHI tareeqa
+// WEBHOOKS ko raw forward karne ka tareeqa
 // /webhooks/* par aane wali har request ko user-service par bhej do
-// Yeh aapke manual http.request wale code se 100% behtar aur stable hai.
 // -----------------------------
 app.use(
   '/webhooks',
   proxy(USER_URL, {
     proxyReqPathResolver: (req) => {
-      // Pura path aage bhej do, jaise /webhooks/clerk
       console.log(`[GW] Forwarding RAW webhook to user-service: ${req.originalUrl}`)
       return req.originalUrl
     },
-    // Yeh sabse zaroori option hai. Yeh proxy ko batata hai ke request body ko
-    // parse na kare, balke usay jaisa hai waisa aage bhej de (raw format mein).
+    // Yeh proxy ko batata hai ke request body ko parse na kare (raw format mein rakhe).
     parseReqBody: false,
   }),
 )
 
-// -------- JSON parsing baaki sab routes ke liye --------
-// Yeh webhook route ke BAAD aana chahiye.
-app.use(express.json({ limit: '2mb' }))
+// -------- JSON parsing (SIRF UN ROUTES KE LIYE JO JSON HAIN) --------
+// Isko alag se define karna zaroori nahi kyunke proxy ab body ko khud handle nahi kar raha.
+// Destination service (user-service) ab body parsing ki zimmedar hai.
+// app.use(express.json({ limit: '2mb' })) // Iski ab yahan zaroorat nahi.
 
 // Proxy to auth-service
 app.use(
@@ -62,6 +59,7 @@ app.use(
       console.log(`[GW] Proxying to AUTH service: ${req.method} ${req.url}`)
       return req.url
     },
+    // auth-service sirf JSON istemal karta hai, isliye yahan parseReqBody ki zaroorat nahi.
   }),
 )
 
@@ -73,6 +71,11 @@ app.use(
       console.log(`[GW] Proxying to USER service: ${req.method} ${req.originalUrl}`)
       return req.originalUrl
     },
+    // === YEH HAI IMAGE UPLOAD KA FINAL FIX ===
+    // Is option (`parseReqBody: false`) se API Gateway ab file uploads
+    // (multipart/form-data) aur JSON requests, dono ko baghair process kiye
+    // seedha user-service tak pohncha dega.
+    parseReqBody: false,
   }),
 )
 
@@ -83,9 +86,9 @@ app.listen(PORT, () => {
   console.log(`   -> Forwarding to USER_URL: ${USER_URL}`)
   console.log('----------------------------------------------------')
   console.log('Routes configured:')
-  // Yahan route ka naam update kar diya hai taake confusion na ho
   console.log('🔔 Webhook: /webhooks/clerk -> user-service (raw body)')
-  console.log('👤 API:     /users/*        -> user-service (JSON body)')
+  // Log message ko update kar diya hai
+  console.log('👤 API:     /users/*        -> user-service (raw body for JSON & files)')
   console.log('🔐 API:     /auth/*         -> auth-service (JSON body)')
   console.log('----------------------------------------------------')
 })

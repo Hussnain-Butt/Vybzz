@@ -350,3 +350,97 @@ body {
 .max-w-7xl {
   padding-top: calc(var(--site-header-height, 72px) + 12px);
 }
+
+/* src/index.css */
+
+/* -------------------------------
+   Tailwind
+   ------------------------------- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------------------
+   Layout defaults & resets
+   ------------------------------- */
+html {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* -------------------------------
+   Page / body
+   ------------------------------- */
+body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background-color: rgb(var(--color-background-dark));
+  color: rgb(var(--color-text-primary));
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+  overflow: auto;
+}
+
+/* -------------------------------
+   Scrollbar
+   ------------------------------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-surface-1));
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-surface-3));
+  border-radius: 10px;
+  border: 2px solid rgb(var(--color-surface-1));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--color-text-link), 0.85);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-surface-3)) rgb(var(--color-surface-1));
+}
+
+/* -------------------------------
+   Utility & small accessibility helpers
+   ------------------------------- */
+:focus {
+  outline: 2px solid rgba(14, 165, 233, 0.18);
+  outline-offset: 2px;
+}
+
+/* --- UPDATED & NEW ANIMATIONS --- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out both;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.4s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+/* Rest of the file remains unchanged... */
+/* ... (All other CSS rules from your original file would follow here) ... */
