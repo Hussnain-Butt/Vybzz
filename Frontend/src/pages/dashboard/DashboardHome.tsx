@@ -1,4 +1,3 @@
-// === 1: UPDATED IMPORTS ===
 import React, { useLayoutEffect, useRef, useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from 'react-query'
 import { gsap } from 'gsap'
@@ -12,11 +11,17 @@ import {
   LuPlus,
   LuLink,
   LuCamera,
+  LuChevronUp,
+  LuChevronDown,
+  LuCheck,
+  LuX,
+  LuRadio,
 } from 'react-icons/lu'
-import { FaPlayCircle, FaCheckCircle, FaRocket } from 'react-icons/fa'
+import { FaPlayCircle, FaRocket } from 'react-icons/fa'
 import toast, { Toaster } from 'react-hot-toast'
+import { IoBarChart } from 'react-icons/io5'
 
-// Import our centralized API functions and components
+// Presumed imports for API and components
 import { getCurrentUser, uploadImages } from '../../api/apiClient.js'
 import { OnboardingModal } from '../../components/creator/OnboardingModal'
 import { BannerCropModal } from '../../components/creator/BannerCropModal'
@@ -104,39 +109,40 @@ const StatCard: React.FC<{
 }> = ({ icon: Icon, label, value, prefix = '', suffix = '' }) => {
   const cardRef = useRef<HTMLDivElement | null>(null)
   const numRef = useRef<HTMLSpanElement | null>(null)
+
   useLayoutEffect(() => {
-    if (!cardRef.current) return
+    if (!cardRef.current || !numRef.current) return
     const ctx = gsap.context(() => {
-      gsap.from(cardRef.current!, { y: 12, opacity: 0, duration: 0.4, ease: 'power2.out' })
-      if (numRef.current) {
-        const obj = { n: 0 }
-        gsap.to(obj, {
-          n: value,
-          duration: 1.1,
-          ease: 'power3.out',
-          onUpdate: () => {
-            if (!numRef.current) return
-            const v = Math.round(obj.n).toLocaleString()
-            numRef.current.textContent = `${prefix}${v}${suffix}`
-          },
-        })
-      }
+      const startValue = { val: 0 }
+      gsap.to(startValue, {
+        val: value,
+        duration: 1.2,
+        ease: 'power3.out',
+        onUpdate: () => {
+          if (numRef.current) {
+            numRef.current.textContent = `${prefix}${Math.round(
+              startValue.val,
+            ).toLocaleString()}${suffix}`
+          }
+        },
+      })
     }, cardRef)
     return () => ctx.revert()
   }, [value, prefix, suffix])
+
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 flex items-center gap-4 shadow-sm stat-card"
+      className="flex items-center gap-4 rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 shadow-sm"
     >
-      <div className="w-11 h-11 rounded-xl grid place-items-center bg-[rgb(var(--color-surface-3))] shrink-0">
-        <Icon className="text-[rgb(var(--color-text-primary))] text-xl" />
+      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[rgb(var(--color-surface-3))]">
+        <Icon className="text-xl text-[rgb(var(--color-text-primary))]" />
       </div>
       <div className="min-w-0">
-        <div className="text-sm text-[rgb(var(--color-text-muted))]">{label}</div>
-        <div className="text-2xl font-semibold text-[rgb(var(--color-text-primary))]">
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">{label}</p>
+        <p className="text-2xl font-semibold text-[rgb(var(--color-text-primary))]">
           <span ref={numRef}>0</span>
-        </div>
+        </p>
       </div>
     </div>
   )
@@ -145,17 +151,19 @@ const ChecklistItem: React.FC<{ done?: boolean; children: React.ReactNode }> = (
   done,
   children,
 }) => (
-  <div className="flex items-start gap-3">
+  <div className="flex items-center gap-4">
     <div
-      className={`mt-0.5 rounded-full p-1 ${
-        done ? 'bg-sky-500/20' : 'bg-[rgb(var(--color-surface-3))]'
+      className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${
+        done ? 'bg-sky-500' : 'border-2 border-[rgb(var(--color-surface-3))]'
       }`}
     >
-      <FaCheckCircle className={done ? 'text-sky-500' : 'text-[rgb(var(--color-text-muted))]'} />
+      {done && <LuCheck className="h-3.5 w-3.5 text-white" />}
     </div>
     <div
       className={`text-sm ${
-        done ? 'text-[rgb(var(--color-text-primary))]' : 'text-[rgb(var(--color-text-secondary))]'
+        done
+          ? 'text-[rgb(var(--color-text-primary))] font-medium'
+          : 'text-[rgb(var(--color-text-secondary))]'
       }`}
     >
       {children}
@@ -164,42 +172,41 @@ const ChecklistItem: React.FC<{ done?: boolean; children: React.ReactNode }> = (
 )
 const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const toggle = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id))
-  }
+  const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id))
+
   return (
     <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
-        <div className="text-lg font-semibold text-[rgb(var(--color-text-primary))]">
+      <div className="mb-6 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
+        <h2 className="text-xl font-semibold text-[rgb(var(--color-text-primary))]">
           Your collections
-        </div>
-        <button className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[rgb(var(--color-surface-1))] bg-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-text-primary))]/90 transition shadow w-full sm:w-auto">
+        </h2>
+        <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[rgb(var(--color-text-primary))] px-4 py-2.5 text-sm font-medium text-[rgb(var(--color-surface-1))] shadow transition hover:bg-[rgb(var(--color-text-primary))]/90 sm:w-auto">
           <LuPlus /> New collection
         </button>
       </div>
-      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((c) => (
           <div
             key={c.id}
-            className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-1))] overflow-hidden"
+            className="overflow-hidden rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-1))]"
           >
             <div className="h-28 w-full bg-[rgb(var(--color-surface-3))]" />
             <div className="p-4">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-md grid place-items-center bg-[rgb(var(--color-surface-3))] text-sm font-semibold shrink-0">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-[rgb(var(--color-surface-3))] text-sm font-semibold">
                   {c.title.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-grow">
-                  <div className="font-medium text-[rgb(var(--color-text-primary))] truncate">
+                  <p className="truncate font-medium text-[rgb(var(--color-text-primary))]">
                     {c.title}
-                  </div>
-                  <div className="text-xs text-[rgb(var(--color-text-muted))]">
+                  </p>
+                  <p className="text-xs text-[rgb(var(--color-text-muted))]">
                     ${c.price}/mo • {c.posts} posts • {c.members} members • updated {c.updatedAt}
-                  </div>
+                  </p>
                 </div>
                 <button
                   onClick={() => toggle(c.id)}
-                  className="ml-auto rounded-lg border border-[rgb(var(--color-surface-3))] px-2 py-1 text-xs text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] transition shrink-0"
+                  className="ml-auto shrink-0 rounded-lg border border-[rgb(var(--color-surface-3))] px-2 py-1 text-xs text-[rgb(var(--color-text-secondary))] transition hover:bg-[rgb(var(--color-surface-2))]"
                 >
                   {expandedId === c.id ? 'Hide' : 'View'}
                 </button>
@@ -209,20 +216,18 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-3 rounded-xl border border-[rgb(var(--color-surface-3))] p-3 hover:bg-[rgb(var(--color-surface-2))] transition"
+                      className="flex items-center gap-3 rounded-xl border border-[rgb(var(--color-surface-3))] p-3 transition hover:bg-[rgb(var(--color-surface-2))]"
                     >
-                      <div className="w-10 h-10 rounded-md bg-[rgb(var(--color-surface-3))] grid place-items-center shrink-0">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-[rgb(var(--color-surface-3))]">
                         <FaPlayCircle />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm text-[rgb(var(--color-text-primary))] truncate">
+                        <p className="truncate text-sm text-[rgb(var(--color-text-primary))]">
                           {c.title} — Post #{i}
-                        </div>
-                        <div className="text-xs text-[rgb(var(--color-text-muted))]">
-                          Draft • 2 min
-                        </div>
+                        </p>
+                        <p className="text-xs text-[rgb(var(--color-text-muted))]">Draft • 2 min</p>
                       </div>
-                      <button className="ml-auto rounded-lg px-2 py-1 text-xs border border-[rgb(var(--color-surface-3))] hover:bg-[rgb(var(--color-surface-2))]">
+                      <button className="ml-auto rounded-lg border border-[rgb(var(--color-surface-3))] px-2 py-1 text-xs hover:bg-[rgb(var(--color-surface-2))]">
                         Edit
                       </button>
                     </div>
@@ -237,35 +242,163 @@ const CollectionsPanel: React.FC<{ items: Collection[] }> = ({ items }) => {
   )
 }
 
-/* ========= Main Screen ========= */
+/* ========= Dashboard Components (Unchanged) ========= */
+const DailyViewsChart = () => {
+  const chartRef = useRef<HTMLDivElement | null>(null)
+  const chartData = useMemo(
+    () => [
+      { day: 'M', value: 320 },
+      { day: 'T', value: 510 },
+      { day: 'W', value: 650 },
+      { day: 'T', value: 480 },
+      { day: 'F', value: 700 },
+      { day: 'S', value: 820 },
+      { day: 'S', value: 780 },
+    ],
+    [],
+  )
+  const maxValue = useMemo(() => Math.max(...chartData.map((d) => d.value)), [chartData])
+
+  useLayoutEffect(() => {
+    if (!chartRef.current) return
+    const bars = chartRef.current.querySelectorAll('.chart-bar')
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        bars,
+        { scaleY: 0, transformOrigin: 'bottom' },
+        { scaleY: 1, duration: 0.7, ease: 'power3.out', stagger: 0.05, delay: 0.3 },
+      )
+    }, chartRef)
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-4 sm:p-6">
+      <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <h3 className="text-lg font-semibold text-[rgb(var(--color-text-primary))]">
+            Daily views (7d)
+          </h3>
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            Your page views over the last week
+          </p>
+        </div>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[rgb(var(--color-surface-3))] px-3 py-2 text-sm transition hover:bg-[rgb(var(--color-surface-3))]">
+          <IoBarChart /> View Analytics
+        </button>
+      </div>
+      <div
+        ref={chartRef}
+        className="flex h-48 items-end justify-between gap-2 sm:gap-3"
+        aria-label="Daily views chart"
+      >
+        {chartData.map((data, index) => (
+          <div key={index} className="group flex flex-1 flex-col items-center">
+            <div className="relative flex h-full w-full items-end">
+              <div
+                className="chart-bar w-full rounded-t-lg bg-gradient-to-t from-sky-500/50 to-sky-500 transition-all duration-300 ease-out hover:scale-y-105 hover:brightness-125"
+                style={{ height: `${(data.value / maxValue) * 100}%` }}
+              />
+              <div className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-[rgb(var(--color-surface-3))] px-2 py-1 text-xs font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                {data.value}
+              </div>
+            </div>
+            <span className="mt-2 text-xs text-[rgb(var(--color-text-muted))]">{data.day}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+const DashboardInfoCards = () => (
+  <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="flex flex-col rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5">
+      <h3 className="text-lg font-semibold">Recent uploads</h3>
+      <div className="my-4 flex-grow space-y-3 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <span>Making a hit in 60 minutes (replay)</span>
+          <span className="shrink-0 rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-400">
+            READY
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span>Studio Sessions: Beat Battle 🔥</span>
+          <span className="shrink-0 rounded-full bg-red-500/20 px-2 py-1 text-xs font-medium text-red-400">
+            LIVE
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span>Mix Template (Download)</span>
+          <span className="shrink-0 rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-400">
+            READY
+          </span>
+        </div>
+      </div>
+      <button className="w-full rounded-xl border border-[rgb(var(--color-surface-3))] py-2.5 text-sm font-semibold transition hover:bg-[rgb(var(--color-surface-3))]">
+        Manage
+      </button>
+    </div>
+    <div className="flex flex-col rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5">
+      <h3 className="text-lg font-semibold">Upcoming live</h3>
+      <div className="my-4 flex-grow">
+        <p className="font-bold">Sunday Beat Cook-off</p>
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">2025-10-07 19:00 • SUB</p>
+      </div>
+      <button className="w-full rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700">
+        Open Live Studio
+      </button>
+    </div>
+    <div className="flex flex-col rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5">
+      <h3 className="text-lg font-semibold">Payouts</h3>
+      <div className="my-4 flex-grow space-y-3 text-sm">
+        <div className="flex items-center justify-between">
+          <span>Sep 1-30</span>
+          <span className="font-semibold text-green-400">$1120.33 • paid</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Aug 1-31</span>
+          <span className="font-semibold text-green-400">$987.44 • paid</span>
+        </div>
+      </div>
+      <button className="w-full rounded-xl border border-[rgb(var(--color-surface-3))] py-2.5 text-sm font-semibold transition hover:bg-[rgb(var(--color-surface-3))]">
+        View details
+      </button>
+    </div>
+  </div>
+)
+
+/* ========= Main Screen (State and Layout updated for closable checklist) ========= */
 const DashboardHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('Home')
   const [isSetupModalOpen, setSetupModalOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-
+  const [isChecklistMinimized, setIsChecklistMinimized] = useState(false)
+  const [isChecklistHidden, setIsChecklistHidden] = useState(false) // NEW state for hiding
   const [bannerCropModalOpen, setBannerCropModalOpen] = useState(false)
   const [imageToCropForBanner, setImageToCropForBanner] = useState<string | null>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
-
   const [profileCropModalOpen, setProfileCropModalOpen] = useState(false)
   const [imageToCropForProfile, setImageToCropForProfile] = useState<string | null>(null)
   const profileInputRef = useRef<HTMLInputElement>(null)
-
-  const statusBarRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLDivElement | null>(null)
-  const gridRef = useRef<HTMLDivElement | null>(null)
-  const checklistRef = useRef<HTMLDivElement | null>(null)
   const tabsRef = useRef<HTMLDivElement | null>(null)
-
   const queryClient = useQueryClient()
 
   const {
     data: user,
     isLoading,
     isError,
-  } = useQuery<UserData, Error>('currentUser', getCurrentUser, {
-    refetchOnWindowFocus: false,
-  })
+  } = useQuery<UserData, Error>('currentUser', getCurrentUser, { refetchOnWindowFocus: false })
+
+  const statsData = useMemo(
+    () => [
+      { icon: LuEye, label: 'Views (7d)', value: 4850 },
+      { icon: LuTrendingUp, label: 'Subscribers (7d)', value: 18 },
+      { icon: FaPlayCircle, label: 'Watch Time (min, 7d)', value: 12500 },
+      { icon: LuDollarSign, label: 'Revenue (7d)', value: 842, prefix: '$' },
+    ],
+    [],
+  )
 
   const readFileAsDataURL = (file: File, callback: (result: string) => void) => {
     const reader = new FileReader()
@@ -273,23 +406,24 @@ const DashboardHome: React.FC = () => {
     reader.readAsDataURL(file)
   }
 
-  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    callback: (img: string) => void,
+  ) => {
     if (e.target.files?.[0]) {
-      readFileAsDataURL(e.target.files[0], (img) => {
-        setImageToCropForBanner(img)
-        setBannerCropModalOpen(true)
-      })
+      readFileAsDataURL(e.target.files[0], callback)
     }
     e.target.value = ''
   }
-  const handleUploadCroppedBanner = async (croppedBlob: Blob) => {
+
+  const handleUploadCroppedImage = async (blob: Blob, type: 'banner' | 'profile') => {
     setIsUploading(true)
-    const toastId = toast.loading('Uploading banner...')
+    const toastId = toast.loading(`Uploading ${type}...`)
     const formData = new FormData()
-    formData.append('bannerImage', croppedBlob, 'banner.jpg')
+    formData.append(type === 'banner' ? 'bannerImage' : 'profileImage', blob, `${type}.jpg`)
     try {
       await uploadImages(formData)
-      toast.success('Banner updated!', { id: toastId })
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} updated!`, { id: toastId })
       await queryClient.invalidateQueries('currentUser')
     } catch (error) {
       toast.error('Upload failed. Please try again.', { id: toastId })
@@ -297,122 +431,64 @@ const DashboardHome: React.FC = () => {
       setIsUploading(false)
     }
   }
-  const triggerBannerUpload = () => bannerInputRef.current?.click()
 
-  const handleProfileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      readFileAsDataURL(e.target.files[0], (img) => {
-        setImageToCropForProfile(img)
-        setProfileCropModalOpen(true)
-      })
-    }
-    e.target.value = ''
+  const handleGoLive = () => {
+    toast('Starting live stream!', { icon: '🔴' })
   }
-  const handleUploadCroppedProfileImage = async (croppedBlob: Blob) => {
-    setIsUploading(true)
-    const toastId = toast.loading('Uploading photo...')
-    const formData = new FormData()
-    formData.append('profileImage', croppedBlob, 'profile.jpg')
-    try {
-      await uploadImages(formData)
-      toast.success('Profile photo updated!', { id: toastId })
-      await queryClient.invalidateQueries('currentUser')
-    } catch (error) {
-      toast.error('Upload failed. Please try again.', { id: toastId })
-    } finally {
-      setIsUploading(false)
-    }
-  }
-  const triggerProfileUpload = () => profileInputRef.current?.click()
 
-  // === CHECKLIST LOGIC UPDATED ===
   const checklistItems = useMemo(() => {
     const profile = user?.creatorProfile
     if (!profile) return []
-
     return [
       { label: 'Set your page name', done: !!profile.pageName },
       { label: 'Add a profile photo', done: !!profile.profileImageUrl },
-      { label: 'Add a banner image', done: !!profile.bannerUrl }, // New step added
+      { label: 'Add a banner image', done: !!profile.bannerUrl },
       { label: 'Describe your page', done: !!profile.bio && profile.bio.length > 10 },
       { label: 'Publish your page', done: profile.status === 'ACTIVE' },
-      { label: 'Promote your page', done: false }, // This can be updated with real logic later
+      // { label: 'Promote your page', done: false },
     ]
   }, [user])
 
-  const completedCount = checklistItems.filter((item) => item.done).length
+  const completedCount = useMemo(
+    () => checklistItems.filter((item) => item.done).length,
+    [checklistItems],
+  )
 
   useLayoutEffect(() => {
     if (isLoading || isError) return
     const ctx = gsap.context(() => {
-      if (statusBarRef.current) {
-        gsap.from(statusBarRef.current, { y: -12, opacity: 0, duration: 0.4, ease: 'power2.out' })
-      }
-      if (heroRef.current) {
-        gsap.from(heroRef.current, {
-          y: 14,
-          opacity: 0,
-          duration: 0.5,
-          ease: 'power3.out',
-          delay: 0.05,
-        })
-      }
-      const cards = gsap.utils.toArray<HTMLElement>('.stat-card')
-      if (cards.length) {
-        gsap.from(cards, {
-          opacity: 0,
-          y: 10,
-          duration: 0.35,
-          ease: 'power2.out',
-          stagger: 0.06,
-          delay: 0.15,
-        })
-      }
-      if (checklistRef.current) {
-        gsap.from(checklistRef.current, {
-          opacity: 0,
-          y: 12,
-          duration: 0.45,
-          ease: 'power2.out',
-          delay: 0.2,
-        })
-      }
+      gsap.from(heroRef.current, { y: 20, opacity: 0, duration: 0.6, ease: 'power3.out' })
     })
     return () => ctx.revert()
   }, [isLoading, isError])
+
   useLayoutEffect(() => {
     if (!tabsRef.current) return
     const u = tabsRef.current.querySelector<HTMLDivElement>('.tab-indicator')
     const a = tabsRef.current.querySelector<HTMLButtonElement>(`button[data-tab="${activeTab}"]`)
     if (!u || !a) return
-    if (!u.style.transform) {
-      gsap.set(u, { x: a.offsetLeft, width: a.offsetWidth, autoAlpha: 1 })
-    } else {
-      gsap.to(u, { x: a.offsetLeft, width: a.offsetWidth, duration: 0.25, ease: 'power2.out' })
-    }
+    gsap.to(u, { x: a.offsetLeft, width: a.offsetWidth, duration: 0.25, ease: 'power2.out' })
   }, [activeTab])
 
-  if (isLoading) {
+  if (isLoading)
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-lg text-[rgb(var(--color-text-secondary))]">Loading...</div>
       </div>
     )
-  }
-  if (isError || !user || !user.creatorProfile) {
+  if (isError || !user || !user.creatorProfile)
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center p-8">
+      <div className="flex h-screen items-center justify-center">
+        <div className="p-8 text-center">
           <div className="text-lg text-red-500">Error loading dashboard.</div>
         </div>
       </div>
     )
-  }
 
   const { creatorProfile } = user
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Toaster
         position="bottom-center"
         toastOptions={{
@@ -422,23 +498,22 @@ const DashboardHome: React.FC = () => {
           },
         }}
       />
+
       {creatorProfile.status === 'DRAFT' && (
-        <div
-          ref={statusBarRef}
-          className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
-        >
-          <div className="text-sm text-center sm:text-left text-[rgb(var(--color-text-secondary))]">
+        <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] px-4 py-3 sm:flex-row sm:items-center">
+          <div className="flex-grow text-center text-sm sm:text-left">
             <span className="font-medium text-[rgb(var(--color-text-primary))]">
-              Your page is not yet published
-            </span>
+              Your page is not yet published.
+            </span>{' '}
+            Complete the checklist to go live.
           </div>
-          <div className="w-full sm:w-auto sm:ml-auto flex gap-2">
-            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 bg-[rgb(var(--color-surface-3))]">
+          <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-[rgb(var(--color-surface-3))] px-3 py-2 text-sm font-semibold transition hover:bg-[rgb(var(--color-surface-3))]">
               <LuEye /> Preview
             </button>
             <button
               onClick={() => setSetupModalOpen(true)}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 bg-white text-black"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-600"
             >
               <FaRocket /> Publish
             </button>
@@ -448,18 +523,18 @@ const DashboardHome: React.FC = () => {
 
       <div
         ref={heroRef}
-        className="relative overflow-hidden rounded-3xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))]"
+        className="overflow-hidden rounded-3xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-1))]"
       >
-        <div className="relative group">
+        <div className="group relative">
           <div
-            className="h-40 w-full bg-cover bg-center"
+            className="h-36 w-full bg-cover bg-center bg-[rgb(var(--color-surface-3))] sm:h-48 md:h-56"
             style={{ backgroundImage: `url(${creatorProfile.bannerUrl || ''})` }}
           />
-          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
             <button
-              onClick={triggerBannerUpload}
+              onClick={() => bannerInputRef.current?.click()}
               disabled={isUploading}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-lg backdrop-blur-sm hover:bg-white/30 transition disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-white backdrop-blur-sm transition hover:bg-white/30 disabled:opacity-50"
             >
               <LuCamera size={16} />
               <span>{isUploading ? 'Uploading...' : 'Change Banner'}</span>
@@ -469,20 +544,29 @@ const DashboardHome: React.FC = () => {
         <input
           type="file"
           ref={bannerInputRef}
-          onChange={handleBannerFileChange}
+          onChange={(e) =>
+            handleFileChange(e, (img) => {
+              setImageToCropForBanner(img)
+              setBannerCropModalOpen(true)
+            })
+          }
           className="hidden"
           accept="image/*"
         />
         <input
           type="file"
           ref={profileInputRef}
-          onChange={handleProfileFileChange}
+          onChange={(e) =>
+            handleFileChange(e, (img) => {
+              setImageToCropForProfile(img)
+              setProfileCropModalOpen(true)
+            })
+          }
           className="hidden"
           accept="image/*"
         />
-
-        <div className="px-4 sm:px-6 pb-5 pt-4 bg-[rgb(var(--color-surface-1))] flex flex-col md:flex-row items-start gap-x-6 gap-y-4">
-          <div className="relative -mt-16 md:-mt-20 group">
+        <div className="flex flex-col items-center p-4 sm:p-6 md:flex-row md:items-end md:gap-4">
+          <div className="group relative -mt-14 shrink-0 md:-mt-20">
             <img
               src={
                 creatorProfile.profileImageUrl ||
@@ -490,44 +574,58 @@ const DashboardHome: React.FC = () => {
                 `https://ui-avatars.com/api/?name=${user.name || '?'}`
               }
               alt="Avatar"
-              className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover shadow-lg border-4 border-[rgb(var(--color-surface-1))]"
+              className="h-24 w-24 rounded-2xl border-4 border-[rgb(var(--color-surface-1))] object-cover shadow-lg md:h-28 md:w-28"
             />
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
               <button
-                onClick={triggerProfileUpload}
+                onClick={() => profileInputRef.current?.click()}
                 disabled={isUploading}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white/20 text-white text-xs rounded-lg backdrop-blur-sm hover:bg-white/30 transition disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs text-white backdrop-blur-sm transition hover:bg-white/30 disabled:opacity-50"
               >
                 <LuCamera size={14} />
                 <span>Change</span>
               </button>
             </div>
           </div>
-
-          <div className="min-w-0">
-            <div className="text-2xl font-semibold">{creatorProfile.pageName || user.name}</div>
-            <div className="flex items-center gap-2 text-sm text-sky-400">
+          <div className="mt-2 min-w-0 flex-grow text-center md:mt-0 md:text-left">
+            <h1 className="truncate text-2xl font-bold">{creatorProfile.pageName || user.name}</h1>
+            <div className="group mt-1 flex cursor-pointer items-center justify-center gap-2 text-sm text-sky-400 md:justify-start">
               <LuLink className="shrink-0" />
-              {`vybzz.com/${creatorProfile.pageUrl}`}
+              <span className="truncate group-hover:underline">{`vybzz.com/${creatorProfile.pageUrl}`}</span>
             </div>
           </div>
-          <div className="hidden md:block flex-1" />
-          <div className="w-full md:w-auto flex gap-2">
-            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2.5 border border-[rgb(var(--color-surface-3))]">
-              <LuEye />
+
+          {/* ========= RESPONSIVE ACTION BUTTONS SECTION ========= */}
+          <div className="mt-4 flex w-full shrink-0 flex-wrap justify-center gap-2 md:mt-0 md:w-auto md:flex-nowrap">
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[rgb(var(--color-surface-3))] transition hover:bg-[rgb(var(--color-surface-3))] sm:w-auto sm:px-3 sm:gap-2">
+              <LuEye className="h-5 w-5" />
+              <span className="hidden sm:inline text-sm">Preview</span>
             </button>
-            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2.5 bg-white text-black">
-              <LuShare2 />
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[rgb(var(--color-surface-3))] transition hover:bg-[rgb(var(--color-surface-3))] sm:w-auto sm:px-3 sm:gap-2">
+              <LuShare2 className="h-5 w-5" />
+              <span className="hidden sm:inline text-sm">Share</span>
             </button>
-            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2.5 bg-sky-500 text-white">
-              <LuPlus />
+            <button
+              onClick={handleGoLive}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-600 sm:w-auto sm:px-3 sm:gap-2 font-semibold"
+            >
+              <LuRadio className="h-5 w-5" />
+              <span className="hidden sm:inline text-sm">Go Live</span>
+            </button>
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white transition hover:bg-sky-600 sm:w-auto sm:px-3 sm:gap-2 font-semibold">
+              <LuPlus className="h-5 w-5" />
+              <span className="hidden sm:inline text-sm">Create</span>
             </button>
           </div>
         </div>
-        <div ref={tabsRef} className="px-4 sm:px-6 pb-4 pt-2 overflow-x-auto">
-          <div className="relative inline-flex items-center gap-2 rounded-full bg-[rgb(var(--color-surface-2))] p-1 border-[rgb(var(--color-surface-3))]">
+
+        <div
+          ref={tabsRef}
+          className="border-t border-[rgb(var(--color-surface-3))] px-4 pt-2 pb-2 sm:px-6"
+        >
+          <div className="relative mt-2 inline-flex items-center gap-1 rounded-full bg-[rgb(var(--color-surface-2))] p-1">
             <div
-              className="tab-indicator absolute inset-y-1 rounded-full bg-[rgb(var(--color-surface-3))] opacity-0 pointer-events-none"
+              className="tab-indicator pointer-events-none absolute inset-y-1 rounded-full bg-[rgb(var(--color-surface-3))]"
               style={{ willChange: 'transform, width' }}
             />
             {(['Home', 'Collections', 'Membership', 'About'] as const).map((t) => (
@@ -535,8 +633,10 @@ const DashboardHome: React.FC = () => {
                 key={t}
                 data-tab={t}
                 onClick={() => setActiveTab(t)}
-                className={`relative z-10 rounded-full px-4 py-2 text-sm transition ${
-                  activeTab === t ? 'text-white' : 'text-slate-400 hover:text-white'
+                className={`relative z-10 rounded-full px-3 py-1.5 text-sm transition-colors duration-200 sm:px-4 ${
+                  activeTab === t
+                    ? 'font-semibold text-[rgb(var(--color-text-primary))]'
+                    : 'text-[rgb(var(--color-text-secondary))] hover:text-[rgb(var(--color-text-primary))]'
                 }`}
               >
                 {t}
@@ -547,54 +647,103 @@ const DashboardHome: React.FC = () => {
       </div>
 
       {activeTab === 'Home' && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6" ref={gridRef}>
-          <div className="xl:col-span-2 space-y-6">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon={LuUsers} label="Active patrons" value={150} />
-              <StatCard icon={LuDollarSign} label="Monthly income" value={1200} prefix="$" />
-              <StatCard icon={LuTrendingUp} label="30-day growth" value={18} suffix="%" />
-              <StatCard icon={FaPlayCircle} label="Last post views" value={842} />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div
+            className={`flex flex-col gap-6 transition-all duration-300 ${
+              isChecklistHidden ? 'lg:col-span-12' : 'lg:col-span-8 xl:col-span-9'
+            }`}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {statsData.map((stat, index) => (
+                <StatCard key={index} {...stat} />
+              ))}
             </div>
-            <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5 flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl grid place-items-center bg-sky-500/15 shrink-0">
+            <DailyViewsChart />
+            <DashboardInfoCards />
+            <div className="flex flex-col items-start gap-4 rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5 sm:flex-row sm:items-center">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-500/15">
                 <LuSparkles className="text-sky-500" />
               </div>
               <div className="flex-1">
-                <div className="font-semibold">Grow your business</div>
-                <div className="text-sm text-slate-400">Add posts and set up membership tiers.</div>
+                <p className="font-semibold">Grow your business</p>
+                <p className="text-sm text-[rgb(var(--color-text-secondary))]">
+                  Add posts and set up membership tiers.
+                </p>
               </div>
-              <button className="rounded-xl px-3.5 py-2.5 bg-white text-black">Get started</button>
+              <button className="w-full shrink-0 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-gray-200 sm:w-auto">
+                Get started
+              </button>
             </div>
           </div>
-          <div
-            ref={checklistRef}
-            className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5"
-          >
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="text-lg font-semibold">Welcome checklist</div>
-              <div className="text-xs bg-slate-700 px-2 py-1 rounded-full">
-                {completedCount} of {checklistItems.length}
+
+          {!isChecklistHidden && (
+            <div className="lg:col-span-4 xl:col-span-3">
+              <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="relative pt-1">
+                    <span className="absolute -top-1 -left-1.5 h-3 w-3 rounded-full bg-teal-400"></span>
+                    <h3 className="text-lg font-bold leading-tight">
+                      Welcome
+                      <br />
+                      checklist
+                    </h3>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <div className="grid h-9 w-9 place-content-center rounded-full bg-[rgb(var(--color-surface-3))] text-center text-xs font-bold leading-tight">
+                      {completedCount} of {checklistItems.length}
+                    </div>
+                    <button
+                      onClick={() => setIsChecklistMinimized(!isChecklistMinimized)}
+                      className="rounded-full p-2 transition-colors hover:bg-[rgb(var(--color-surface-3))]"
+                    >
+                      {isChecklistMinimized ? <LuChevronDown /> : <LuChevronUp />}
+                    </button>
+                    <button
+                      onClick={() => setIsChecklistHidden(true)}
+                      className="rounded-full p-2 transition-colors hover:bg-[rgb(var(--color-surface-3))]"
+                    >
+                      <LuX className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className="overflow-hidden transition-all duration-300 ease-in-out"
+                  style={{
+                    maxHeight: isChecklistMinimized ? '0px' : '500px',
+                    marginTop: isChecklistMinimized ? '0' : '1.5rem',
+                    opacity: isChecklistMinimized ? 0 : 1,
+                  }}
+                >
+                  <div className="space-y-4">
+                    {checklistItems.map((item, i) => (
+                      <ChecklistItem key={i} done={item.done}>
+                        {item.label}
+                      </ChecklistItem>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setSetupModalOpen(true)}
+                    className="mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-transparent bg-[rgb(var(--color-surface-3))] py-2.5 text-sm font-semibold transition hover:bg-[rgb(var(--color-surface-3))]/80"
+                  >
+                    <FaPlayCircle /> Continue setup
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="space-y-4">
-              {checklistItems.map((item, i) => (
-                <ChecklistItem key={i} done={item.done}>
-                  {item.label}
-                </ChecklistItem>
-              ))}
-            </div>
-            <button
-              onClick={() => setSetupModalOpen(true)}
-              className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl p-2.5 border border-[rgb(var(--color-surface-3))]"
-            >
-              <FaPlayCircle /> Continue setup
-            </button>
-          </div>
+          )}
         </div>
       )}
       {activeTab === 'Collections' && <CollectionsPanel items={demoCollections} />}
-      {activeTab === 'Membership' && <div className="p-6">Membership page coming soon.</div>}
-      {activeTab === 'About' && <div className="p-6">About page editor coming soon.</div>}
+      {activeTab === 'Membership' && (
+        <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-6">
+          Membership page coming soon.
+        </div>
+      )}
+      {activeTab === 'About' && (
+        <div className="rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-2))] p-6">
+          About page editor coming soon.
+        </div>
+      )}
 
       <OnboardingModal
         open={isSetupModalOpen}
@@ -609,13 +758,13 @@ const DashboardHome: React.FC = () => {
         imageSrc={imageToCropForBanner}
         open={bannerCropModalOpen}
         onOpenChange={setBannerCropModalOpen}
-        onCropComplete={handleUploadCroppedBanner}
+        onCropComplete={(blob) => handleUploadCroppedImage(blob, 'banner')}
       />
       <ProfileCropModal
         imageSrc={imageToCropForProfile}
         open={profileCropModalOpen}
         onOpenChange={setProfileCropModalOpen}
-        onCropComplete={handleUploadCroppedProfileImage}
+        onCropComplete={(blob) => handleUploadCroppedImage(blob, 'profile')}
       />
     </div>
   )

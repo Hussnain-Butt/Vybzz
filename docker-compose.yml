@@ -1,4 +1,4 @@
-version: '3.8'
+# File: docker-compose.yml (COMPLETE AND FINAL UPDATED VERSION)
 
 name: vybzz-stack
 
@@ -33,13 +33,13 @@ services:
       DOCKER: 'true'
       AUTH_URL: 'http://auth-service:3001'
       USER_URL: 'http://user-service:3002'
+      POST_URL: 'http://post-service:3003'
     ports:
       - '3000:3000'
     depends_on:
-      auth-service:
-        condition: service_healthy
-      user-service:
-        condition: service_healthy
+      - auth-service
+      - user-service
+      - post-service
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 10s
@@ -59,8 +59,7 @@ services:
     ports:
       - '3001:3001'
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
       interval: 10s
@@ -71,37 +70,58 @@ services:
     build:
       context: ./Backend/services/user-service
       dockerfile: Dockerfile
-      args:
-        - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/vybzz
     container_name: user-service
     restart: unless-stopped
     environment:
+      # === DATABASE URL FIXED: Removed '?schema=users' ===
       DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz'
       CLERK_WEBHOOK_SIGNING_SECRET: 'whsec_xeTb2X35/E+kbYPVLIU5ut6x8ND3bzzb'
       CLERK_SECRET_KEY: 'sk_test_0pqUaGtPfRk3MgllAFsqJCUCh0acO6OUEBKd7klwRn'
       CLERK_PUBLISHABLE_KEY: 'pk_test_d2VsY29tZS1kZWVyLTAuY2xlcmsuYWNjb3VudHMuZGV2JA'
-      # Agar aapne debug mode on rakha tha, to ab usay hata sakte hain ya comment kar sakte hain
-      # DEBUG_WEBHOOK_BYPASS_VERIFY: 'true'
       CLOUDINARY_CLOUD_NAME: 'dxi6hlanc'
       CLOUDINARY_API_KEY: '373723696384711'
       CLOUDINARY_API_SECRET: 'gfJHpY8i2VM4h7ven7ym89jMF5w'
       PORT: '3002'
       NODE_ENV: 'development'
-
-    # === YEH HAI FINAL NETWORK FIX ===
-    # Hum container ko Google ke DNS servers istemal karne ko keh rahe hain
-    # taake woh Cloudinary se aaram se connect ho sake.
     dns:
       - 8.8.8.8
       - 8.8.4.4
-
     ports:
       - '3002:3002'
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    
+    sysctls:
+        net.ipv6.conf.all.disable_ipv6: 1
+   
+
+  post-service:
+    build:
+      context: ./Backend/services/post-service
+      dockerfile: Dockerfile
+    container_name: post-service
+    restart: unless-stopped
+    env_file:
+      - ./Backend/services/post-service/.env
+    environment:
+      # === DATABASE URL FIXED: Removed '?schema=posts' ===
+      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz'
+      PORT: '3003'
+      NODE_ENV: 'development'
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    ports:
+      - '3003:3003'
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3003/health']
       interval: 10s
       timeout: 3s
       retries: 10

@@ -1,7 +1,7 @@
 // src/components/creator/CreatorHeader.tsx
 
 import React, { useState, useRef } from 'react'
-import { Camera, Eye, Link, Plus, Share2 } from 'lucide-react'
+import { Camera, Eye, Link, Plus, Share2, Radio } from 'lucide-react' // Radio icon import kiya gaya
 import { uploadImages } from '../../api/apiClient' // API function for uploading
 import { toast } from 'react-hot-toast' // For showing success/error messages
 
@@ -65,6 +65,12 @@ export const CreatorHeader: React.FC<CreatorHeaderProps> = ({ user, onProfileUpd
   const profile = user.creatorProfile
   const bannerSrc = profile.bannerUrl || DEFAULT_BANNER
 
+  // Placeholder function for Go Live button
+  const handleGoLive = () => {
+    // Yahan live streaming shuru karne ka logic add hoga
+    toast('Starting live stream!', { icon: '🔴' })
+  }
+
   return (
     <header className="rounded-t-2xl overflow-hidden">
       {/* Banner Section */}
@@ -72,7 +78,7 @@ export const CreatorHeader: React.FC<CreatorHeaderProps> = ({ user, onProfileUpd
         <img
           src={bannerSrc}
           alt={`${profile.pageName}'s banner`}
-          className="h-48 md:h-64 w-full object-cover"
+          className="h-40 sm:h-48 md:h-64 w-full object-cover" // Chhote screen ke liye height adjust ki gayi
         />
         {/* Hover Overlay with Upload Button */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -96,53 +102,64 @@ export const CreatorHeader: React.FC<CreatorHeaderProps> = ({ user, onProfileUpd
       </div>
 
       {/* Profile Info Section */}
-      <div className="bg-slate-800 p-4 md:p-6">
-        <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20">
+      <div className="bg-slate-800 p-3 sm:p-4 md:p-6">
+        <div className="flex flex-col md:flex-row items-center md:items-end -mt-14 sm:-mt-16 md:-mt-20">
           <img
             src={user.creatorProfile.profileImageUrl || '/default-avatar.png'}
             alt={`${user.name}'s profile`}
-            className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-slate-800 object-cover shadow-lg"
+            className="w-24 h-24 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-full border-4 border-slate-800 object-cover shadow-lg" // Chhote screen ke liye size adjust kiya gaya
           />
-          <div className="flex-1 text-center md:text-left md:ml-6 mt-4 md:mt-0">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">{user.name}</h1>
+          <div className="flex-1 text-center md:text-left md:ml-6 mt-3 sm:mt-4 md:mt-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{user.name}</h1>
             <div className="flex items-center justify-center md:justify-start text-sm text-sky-400 mt-1">
               <Link className="h-3 w-3 mr-1.5" />
               <span>{`vybzz.com/${profile.pageUrl}`}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-4 md:mt-0">
-            <button className="flex items-center gap-2 px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+          {/* Action Buttons: Responsive container */}
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 mt-4 md:mt-0 w-full md:w-auto">
+            <button className="flex items-center gap-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
               <Eye className="h-4 w-4" /> Preview
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm bg-white text-slate-900 font-semibold hover:bg-slate-200 rounded-lg transition-colors">
+            <button className="flex items-center gap-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
               <Share2 className="h-4 w-4" /> Share
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-lg transition-colors">
+            {/* Naya Go Live Button */}
+            <button
+              onClick={handleGoLive}
+              className="flex items-center gap-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors"
+            >
+              <Radio className="h-4 w-4" /> Go Live
+            </button>
+            <button className="flex items-center gap-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-lg transition-colors">
               <Plus className="h-4 w-4" /> Create
             </button>
           </div>
         </div>
         {/* Navigation Tabs */}
         <nav className="mt-6 border-t border-slate-700 pt-4">
-          <div className="flex items-center gap-2">
-            <a href="#" className="px-4 py-1.5 text-sm bg-slate-700 rounded-full">
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="#"
+              className="px-3 py-1.5 sm:px-4 text-xs sm:text-sm bg-slate-700 rounded-full"
+            >
               Home
             </a>
             <a
               href="#"
-              className="px-4 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full"
+              className="px-3 py-1.5 sm:px-4 text-xs sm:text-sm text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full"
             >
               Collections
             </a>
             <a
               href="#"
-              className="px-4 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full"
+              className="px-3 py-1.5 sm:px-4 text-xs sm:text-sm text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full"
             >
               Membership
             </a>
             <a
               href="#"
-              className="px-4 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full"
+              className="px-3 py-1.5 sm:px-4 text-xs sm:text-sm text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full"
             >
               About
             </a>

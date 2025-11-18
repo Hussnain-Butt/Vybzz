@@ -1,7 +1,7 @@
 import React, { useState, useLayoutEffect, useRef, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { gsap } from 'gsap'
-import { useUser } from '@clerk/clerk-react' // ✅ Clerk ka hook import kiya
+import { useUser } from '@clerk/clerk-react'
 import {
   LuLayoutDashboard,
   LuLibrary,
@@ -20,6 +20,7 @@ import { FaChartBar } from 'react-icons/fa'
 import { FiMoreHorizontal } from 'react-icons/fi'
 import ProfileMenu from './ProfileMenu'
 import Logo from '../../assets/Logo.png'
+import { getOwnCreatorProfile } from '../../api/apiClient' // API function import
 
 type Item = {
   name: string
@@ -58,13 +59,28 @@ const Sidebar: React.FC<SidebarProps> = ({
   const indicatorRef = useRef<HTMLDivElement>(null)
   const liRefs = useRef<(HTMLLIElement | null)[]>([])
   const menuButtonRef = useRef<HTMLButtonElement>(null)
-
-  // ✅ User data fetch karne ke liye hook
   const { user } = useUser()
+  const [creatorImageUrl, setCreatorImageUrl] = useState<string | null>(null)
 
-  // ✅ Profile picture aur initials ke liye logic
-  const googleAccount = user?.externalAccounts.find((acc) => acc.provider === 'oauth_google')
-  const displayImageUrl = googleAccount?.imageUrl || user?.profileImageUrl
+  useEffect(() => {
+    const fetchProfileForSidebar = async () => {
+      try {
+        const userData = await getOwnCreatorProfile()
+        if (userData && userData.creatorProfile && userData.creatorProfile.profileImageUrl) {
+          setCreatorImageUrl(userData.creatorProfile.profileImageUrl)
+        }
+      } catch (error) {
+        console.error('Failed to fetch creator profile for sidebar:', error)
+      }
+    }
+    fetchProfileForSidebar()
+  }, [])
+
+  const clerkImageUrl =
+    user?.externalAccounts.find((acc) => acc.provider === 'oauth_google')?.imageUrl ||
+    user?.profileImageUrl
+
+  const displayImageUrl = creatorImageUrl || clerkImageUrl
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '?'
@@ -104,10 +120,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     <aside
       ref={sidebarRef}
       className={`
-        flex h-screen flex-col bg-[rgb(var(--color-surface-1))] border-r border-[rgb(var(--color-surface-2))] transition-transform duration-300 ease-in-out
+        flex h-screen flex-col bg-[rgb(var(--color-surface-1))] border-r border-[rgb(var(--color-surface-2))]
+        transition-all duration-300 ease-in-out
         fixed inset-y-0 left-0 z-40 w-64 transform 
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:relative md:translate-x-0 md:transition-all
+        md:relative md:translate-x-0
         ${isCollapsed ? 'md:w-20' : 'md:w-64'}
       `}
     >
@@ -155,25 +172,21 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Scroll area */}
-      <nav
-        className="relative flex-1 overflow-y-auto custom-scrollbar min-h-0 overscroll-contain"
-        style={{ scrollbarGutter: 'stable both-edges' as any }}
-      >
-        <div
-          ref={indicatorRef}
-          className="absolute left-2 w-1 rounded-full bg-[rgb(var(--color-primary-blue))]/80 transition-opacity duration-300"
-        />
-        <ul
-          className={`pt-2 pb-3 space-y-1 ${
-            isCollapsed ? 'px-0 items-center' : 'px-3'
-          } flex flex-col`}
-        >
+      {/* Scroll area - YAHAN BADLAV KIYA GAYA HAI: custom-scrollbar ko hide-scrollbar se replace kiya gaya hai */}
+      <nav className="relative flex-1 overflow-y-auto hide-scrollbar min-h-0 overscroll-contain">
+        {!isCollapsed && (
+          <div
+            ref={indicatorRef}
+            className="absolute left-2 w-1 rounded-full bg-[rgb(var(--color-primary-blue))]/80 transition-opacity duration-300"
+          />
+        )}
+        {/* YAHAN BADLAV KIYA GAYA HAI: Collapsed state mein padding ko consistent banaya gaya hai */}
+        <ul className={`pt-2 pb-3 space-y-1 ${isCollapsed ? 'px-2' : 'px-3'} flex flex-col`}>
           {sidebarNavItems.map((item, index) => (
             <li
               key={item.name}
               ref={(el) => (liRefs.current[index] = el)}
-              className={`${isCollapsed ? 'w-full flex justify-center' : ''}`}
+              // YAHAN BADLAV KIYA GAYA HAI: li ko center karne ke liye extra classes hatayi gayi hain kyonki NavLink ab ise handle kar raha hai
             >
               <NavLink
                 to={item.path}
@@ -183,22 +196,24 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className={({ isActive }) => {
                   const base =
                     'flex items-center rounded-xl transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20'
-                  const expanded = 'justify-start gap-3 px-3 py-2.5'
-                  const collapsed = 'justify-center w-12 h-12 p-0 rounded-2xl'
+                  // YAHAN BADLAV KIYA GAYA HAI: Collapsed state ke liye width aur centering ko direct NavLink par apply kiya gaya hai
+                  const layout = isCollapsed
+                    ? 'justify-center mx-auto w-12 h-12 rounded-2xl'
+                    : 'justify-start gap-3 px-3 py-2.5'
                   const state = isActive
                     ? 'sb-active bg-[rgb(var(--color-surface-2))] text-white'
                     : 'text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-2))] hover:text-white'
-                  return `${base} ${isCollapsed ? `md:${collapsed}` : expanded} ${state}`
+                  return `${base} ${layout} ${state}`
                 }}
               >
                 <item.Icon
                   className={`text-xl shrink-0 transition-transform duration-200 ${
-                    isCollapsed ? 'group-hover:md:scale-110' : ''
+                    isCollapsed ? 'group-hover:scale-110' : ''
                   }`}
                 />
                 <span
                   className={`text-[15px] font-medium tracking-wide transition-all duration-200 whitespace-nowrap ${
-                    isCollapsed ? 'md:opacity-0 md:w-0' : 'opacity-100'
+                    isCollapsed ? 'opacity-0 w-0 sr-only' : 'opacity-100'
                   }`}
                 >
                   {item.name}
@@ -210,31 +225,29 @@ const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Footer */}
-      <div className="px-3 pb-4 pt-2 space-y-3">
+      {/* YAHAN BADLAV KIYA GAYA HAI: Footer mein padding ko consistent banaya gaya hai */}
+      <div className={`px-3 pb-4 pt-2 space-y-3 ${isCollapsed ? 'px-2' : 'px-3'}`}>
         <button
+          title={isCollapsed ? 'Create' : undefined}
           className={`${
             isCollapsed
-              ? 'mx-auto grid place-items-center w-12 h-12 rounded-2xl md:mx-auto'
+              ? 'mx-auto grid place-items-center w-12 h-12 rounded-2xl'
               : 'w-full inline-flex items-center justify-center gap-2 rounded-2xl py-3'
           } font-semibold shadow-md hover:shadow-lg transition-all duration-300 bg-white text-black hover:bg-gray-200`}
         >
           <LuPlus className={`${isCollapsed ? 'text-xl' : 'text-base'} shrink-0`} />
-          <span
-            className={`${isCollapsed ? 'sr-only md:not-sr-only md:opacity-0' : 'opacity-100'}`}
-          >
-            Create
-          </span>
+          <span className={`${isCollapsed ? 'sr-only' : 'opacity-100'}`}>Create</span>
         </button>
 
-        {/* Profile card - ✅ DYNAMIC DATA KE SATH UPDATE KIYA GAYA */}
+        {/* Profile card */}
         <div
-          className={`relative transition-colors ${
+          className={`relative transition-colors duration-300 ${
             isCollapsed
-              ? 'w-12 h-12 mx-auto grid place-items-center rounded-2xl '
-              : 'flex items-center gap-3 rounded-2xl p-2.5 bg-[rgb(var(--color-surface-2))] border border-[rgb(var(--color-surface-3))]'
+              ? 'w-12 h-12 mx-auto'
+              : 'flex items-center gap-3 rounded-2xl p-2 bg-[rgb(var(--color-surface-2))]'
           }`}
         >
-          <div className="w-10 h-10 rounded-full bg-[rgb(var(--color-accent-orange))] grid place-items-center text-white font-bold shrink-0 overflow-hidden">
+          <div className="w-10 h-10 rounded-full bg-[rgb(var(--color-accent-orange))] grid place-items-center text-white font-bold shrink-0 overflow-hidden mx-auto">
             {displayImageUrl ? (
               <img
                 src={displayImageUrl}
@@ -247,8 +260,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div
-            className={`min-w-0 flex-1 transition-all duration-200 ${
-              isCollapsed ? 'opacity-0 w-0 md:opacity-0 md:w-0' : 'opacity-100'
+            className={`min-w-0 flex-1 transition-opacity duration-200 ${
+              isCollapsed ? 'opacity-0 w-0 sr-only' : 'opacity-100'
             }`}
           >
             <div className="text-sm font-semibold text-white truncate">
@@ -261,7 +274,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             ref={menuButtonRef}
             onClick={() => setMenuOpen((s) => !s)}
             className={`p-1.5 rounded-lg hover:bg-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-secondary))] hover:text-white transition-all duration-200 ${
-              isCollapsed ? 'opacity-0 w-0 md:opacity-0 md:w-0' : 'opacity-100 ml-auto'
+              isCollapsed ? 'opacity-0 w-0 sr-only' : 'opacity-100 ml-auto'
             }`}
             aria-label="Open profile menu"
             aria-haspopup="menu"
