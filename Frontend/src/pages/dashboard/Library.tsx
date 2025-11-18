@@ -1,10 +1,11 @@
-// src/pages/dashboard/Library.tsx
-import React, { useLayoutEffect, useRef } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { gsap } from 'gsap'
-import { Search, Filter } from 'lucide-react'
+// File: src/pages/dashboard/Library.tsx (COMPLETE AND FINAL UPDATED VERSION)
 
-// Tabs ke liye data structure, routing ke liye path ke saath
+import React, { useLayoutEffect, useRef } from 'react'
+// CHANGE 1: Import Link component for the button and PlusCircle icon
+import { NavLink, Outlet, useLocation, Link } from 'react-router-dom'
+import { gsap } from 'gsap'
+import { Search, Filter, PlusCircle } from 'lucide-react'
+
 const TABS = [
   { name: 'Posts', path: 'posts' },
   { name: 'Collections', path: 'collections' },
@@ -15,7 +16,6 @@ const Library = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
 
-  // Active tab ka naam URL se hasil karein, search bar mein dikhane ke liye
   const activeTabName = TABS.find((tab) => location.pathname.includes(tab.path))?.name || 'Posts'
 
   useLayoutEffect(() => {
@@ -35,19 +35,16 @@ const Library = () => {
         .fromTo(
           '.gsap-toolbar',
           { opacity: 0, y: -15 },
-          { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' },
-          '-=0.3',
+          { opacity: 1, y: 0, duration: 0.4, stagger: 0.1, ease: 'power3.out' },
+          '-=0.3', // Added stagger to animate toolbar items one by one
         )
     }, containerRef)
     return () => ctx.revert()
   }, [])
 
   return (
-    <div
-      ref={containerRef}
-      className="p-4 sm:p-6 lg:p-8 text-[rgb(var(--color-text-primary))] min-h-screen"
-    >
-      <div className="max-w-7xl mx-auto">
+    <div ref={containerRef} className="min-h-screen text-[rgb(var(--color-text-primary))]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Page Header */}
         <header className="mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight gsap-title">Library</h1>
@@ -56,9 +53,9 @@ const Library = () => {
           </p>
         </header>
 
-        {/* Tabs aur Toolbar */}
+        {/* Tabs and Toolbar */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
-          {/* Tabs Navigation (ab NavLink ka istemal kar raha hai) */}
+          {/* Tabs Navigation */}
           <nav className="bg-[rgb(var(--color-surface-1))] p-1.5 rounded-lg">
             <ul className="flex items-center gap-2">
               {TABS.map((tab) => (
@@ -80,13 +77,23 @@ const Library = () => {
             </ul>
           </nav>
 
-          {/* Toolbar: Filter and Search */}
-          <div className="flex w-full sm:w-auto items-center gap-3 gsap-toolbar">
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-[rgb(var(--color-surface-2))] text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-3))] rounded-lg transition-colors duration-200">
+          {/* Toolbar: Create, Filter and Search */}
+          <div className="flex w-full sm:w-auto items-center gap-3">
+            {/* CHANGE 2: Added the "Create Post" button here */}
+            <Link
+              to="/dashboard/library/posts/new" // This links to your create post page
+              className="gsap-toolbar flex items-center gap-2 px-4 py-2.5 bg-[rgb(var(--color-primary-blue))] text-white font-semibold hover:bg-[rgb(var(--color-primary-cyan))] rounded-lg transition-all duration-200 ease-in-out"
+            >
+              <PlusCircle size={18} />
+              <span className="text-sm hidden sm:inline">Create Post</span>
+            </Link>
+
+            <button className="gsap-toolbar flex items-center gap-2 px-4 py-2.5 bg-[rgb(var(--color-surface-2))] text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-surface-3))] rounded-lg transition-colors duration-200">
               <Filter size={18} />
               <span className="text-sm font-medium">Filter</span>
             </button>
-            <div className="relative flex-grow">
+
+            <div className="gsap-toolbar relative flex-grow sm:flex-grow-0">
               <Search
                 size={20}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-muted))]"
@@ -100,7 +107,7 @@ const Library = () => {
           </div>
         </div>
 
-        {/* Child Route Content Yahan Render Hoga */}
+        {/* Child Route Content Will Render Here */}
         <Outlet />
       </div>
     </div>

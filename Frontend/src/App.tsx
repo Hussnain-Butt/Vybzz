@@ -4,11 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
 import { useQuery } from 'react-query'
 
-// === CHANGE 1: IMPORT the getCurrentUser function ===
 import { getCurrentUser } from './api/apiClient'
-
-// === NAYA PUBLIC PAGE COMPONENT IMPORT KAREIN ===
-// Yeh file aapko `src/pages/` folder mein banani hogi jaisa pichle jawab mein bataya gaya tha.
 import PublicCreatorPage from './pages/PublicCreatorPage'
 
 // Layouts
@@ -61,6 +57,10 @@ import Library from './pages/dashboard/Library'
 import PostsPage from './pages/dashboard/library/PostsPage'
 import CollectionsPage from './pages/dashboard/library/CollectionsPage'
 import DraftsPage from './pages/dashboard/library/DraftsPage'
+// ========================================================================
+// === CHANGE 1: Naya Post Editor component import karein ===
+// ========================================================================
+import CreatePostPage from './pages/dashboard/library/CreatePostPage'
 import Audience from './pages/dashboard/Audience'
 import RelationshipManagerPage from './pages/dashboard/audience/RelationshipManagerPage'
 import BenefitsPage from './pages/dashboard/audience/BenefitsPage'
@@ -68,6 +68,7 @@ import ExitSurveysPage from './pages/dashboard/audience/ExitSurveysPage'
 import Insights from './pages/dashboard/Insights'
 import MembershipPage from './pages/dashboard/insights/MembershipPage'
 import EarningsPage from './pages/dashboard/insights/EarningsPage'
+// Note: Insights mein PostsPage ka import dobara tha, use hata sakte hain agar zaroorat na ho
 import SurveysPage from './pages/dashboard/insights/SurveysPage'
 import TrafficPage from './pages/dashboard/insights/TrafficPage'
 import Payouts from './pages/dashboard/Payouts'
@@ -115,24 +116,11 @@ import AdminSettings from './pages/admin/AdminSettings'
 
 // Components
 import CursorFollower from './components/CursorFollower'
+import ViewPostPage from './pages/dashboard/library/ViewPostPage'
 
 // --- Route Protection & Data Fetching Logic ---
 
-// === CHANGE 2: REMOVE the old fetchUserFromApi function ===
-/*
-const fetchUserFromApi = async (getToken: () => Promise<string | null>) => {
-  const token = await getToken()
-  if (!token) throw new Error('Not authenticated')
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to fetch user data')
-  return response.json()
-}
-*/
-
 const CreatorProtectedRoute = () => {
-  // === CHANGE 3: USE the imported `getCurrentUser` function in useQuery ===
   const { data: user, isLoading, isError } = useQuery('currentUser', getCurrentUser)
 
   if (isLoading) return <div>Loading your creator profile...</div>
@@ -142,7 +130,6 @@ const CreatorProtectedRoute = () => {
 }
 
 const RedirectIfCreator = () => {
-  // === CHANGE 4: USE the imported `getCurrentUser` function here as well ===
   const { data: user, isLoading } = useQuery('currentUser', getCurrentUser)
 
   if (isLoading) return <MemberLayout />
@@ -160,7 +147,7 @@ function App() {
     <>
       <CursorFollower />
       <Routes>
-        {/* --- AUTH & ONBOARDING ROUTES (No Change) --- */}
+        {/* --- AUTH & ONBOARDING ROUTES --- */}
         <Route path="/sso-callback" element={<SsoCallbackPage />} />
         <Route
           path="/auth-redirect"
@@ -200,7 +187,7 @@ function App() {
           }
         />
 
-        {/* --- PROTECTED DASHBOARD ROUTES (No Change) --- */}
+        {/* --- PROTECTED DASHBOARD ROUTES --- */}
         <Route
           path="/dashboard/*"
           element={
@@ -262,6 +249,39 @@ function App() {
             <Route path="billing" element={<BillingPage />} />
           </Route>
         </Route>
+
+        {/* ======================================================================== */}
+        {/* === CHANGE 2: Post editor ke liye naya route add karein === */}
+        {/* ======================================================================== */}
+        <Route
+          path="/dashboard/library/posts/new"
+          element={
+            <>
+              <SignedIn>
+                <CreatePostPage />
+              </SignedIn>
+              <SignedOut>
+                {/* User ko creator login par bhejein agar woh signed out hain */}
+                <RedirectToSignIn signInUrl="/login?role=creator" />
+              </SignedOut>
+            </>
+          }
+        />
+        {/* ADD THIS NEW ROUTE for viewing a SINGLE post */}
+        <Route
+          path="/dashboard/library/posts/:postId"
+          element={
+            <>
+              <SignedIn>
+                <ViewPostPage />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn signInUrl="/login?role=creator" />
+              </SignedOut>
+            </>
+          }
+        />
+
         <Route
           path="/member/*"
           element={
@@ -312,7 +332,7 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
         </Route>
 
-        {/* === PUBLIC ROUTES WITH DYNAMIC CREATOR PAGE (No Change) === */}
+        {/* === PUBLIC ROUTES WITH DYNAMIC CREATOR PAGE === */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Landing />} />
 
