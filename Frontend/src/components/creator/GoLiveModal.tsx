@@ -1,7 +1,7 @@
 // File: src/components/creator/GoLiveModal.js (COMPLETE REWRITE)
 
 import React, { useEffect, useRef, useState } from 'react'
-import { LuCamera, LuMic, LuX, LuRadio } from 'react-icons/lu'
+import { LuCamera, LuMic, LuX, LuRadio, LuCameraOff, LuMicOff } from 'react-icons/lu'
 import toast from 'react-hot-toast'
 
 export const GoLiveModal = ({ streamKey, onClose }) => {
@@ -143,14 +143,17 @@ export const GoLiveModal = ({ streamKey, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="relative flex w-full max-w-4xl flex-col rounded-2xl border border-[rgb(var(--color-surface-3))] bg-[rgb(var(--color-surface-1))] p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgb(var(--color-background-dark)/0.8)] backdrop-blur-md">
+      <div className="relative flex w-full max-w-4xl flex-col rounded-xl border border-[rgb(var(--color-surface-2))] bg-[rgb(var(--color-surface-1))] p-5 shadow-2xl animate-fadeInUp md:p-6">
+        {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">
+          <h2 className="text-xl font-bold text-[rgb(var(--color-text-primary))]">
             <span className="flex items-center gap-3">
               <LuRadio
                 className={`transition-colors ${
-                  isStreaming ? 'text-red-500 animate-pulse' : 'text-gray-500'
+                  isStreaming
+                    ? 'text-pink-500 animate-pulse'
+                    : 'text-[rgb(var(--color-text-muted))]'
                 }`}
               />
               Live Studio
@@ -158,53 +161,64 @@ export const GoLiveModal = ({ streamKey, onClose }) => {
           </h2>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-gray-400 transition-colors hover:bg-[rgb(var(--color-surface-3))] hover:text-white"
+            className="rounded-full p-2 text-[rgb(var(--color-text-secondary))] transition-colors hover:bg-[rgb(var(--color-surface-2))] hover:text-[rgb(var(--color-text-primary))]"
           >
             <LuX size={20} />
           </button>
         </div>
 
+        {/* Video Preview */}
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
           <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
           <div
-            className={`absolute top-4 left-4 rounded-md px-2 py-1 text-xs font-bold uppercase ${
-              isStreaming ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-200'
+            className={`absolute top-3 left-4 flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${
+              isStreaming
+                ? 'bg-pink-600/90 text-white'
+                : 'bg-[rgb(var(--color-surface-3))] text-[rgb(var(--color-text-secondary))]'
             }`}
           >
+            {isStreaming && <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>}
             {isStreaming ? 'Live' : 'Offline'}
           </div>
         </div>
 
+        {/* Controls */}
         <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-3">
             <button
               onClick={() => toggleTrack('video')}
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                isCameraOn ? 'bg-[rgb(var(--color-surface-3))]' : 'bg-red-600'
-              }`}
+              className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                isCameraOn
+                  ? 'border-[rgb(var(--color-surface-2))] bg-[rgb(var(--color-surface-2))]'
+                  : 'border-[rgb(var(--color-surface-3))] bg-transparent text-[rgb(var(--color-text-secondary))]'
+              } hover:border-[rgb(var(--color-primary-cyan))]`}
+              aria-label={isCameraOn ? 'Turn camera off' : 'Turn camera on'}
             >
-              <LuCamera size={22} />
+              {isCameraOn ? <LuCamera size={22} /> : <LuCameraOff size={22} />}
             </button>
             <button
               onClick={() => toggleTrack('audio')}
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                isMicOn ? 'bg-[rgb(var(--color-surface-3))]' : 'bg-red-600'
-              }`}
+              className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                isMicOn
+                  ? 'border-[rgb(var(--color-surface-2))] bg-[rgb(var(--color-surface-2))]'
+                  : 'border-[rgb(var(--color-surface-3))] bg-transparent text-[rgb(var(--color-text-secondary))]'
+              } hover:border-[rgb(var(--color-primary-cyan))]`}
+              aria-label={isMicOn ? 'Mute microphone' : 'Unmute microphone'}
             >
-              <LuMic size={22} />
+              {isMicOn ? <LuMic size={22} /> : <LuMicOff size={22} />}
             </button>
           </div>
           {isStreaming ? (
             <button
               onClick={stopStreaming}
-              className="w-full rounded-xl bg-gray-600 px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-gray-700 sm:w-auto"
+              className="w-full rounded-lg bg-[rgb(var(--color-surface-2))] px-8 py-3 text-base font-semibold text-[rgb(var(--color-text-primary))] transition-colors hover:bg-[rgb(var(--color-surface-3))] sm:w-auto"
             >
               Stop Streaming
             </button>
           ) : (
             <button
               onClick={startStreaming}
-              className="w-full rounded-xl bg-red-600 px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-red-700 sm:w-auto"
+              className="w-full rounded-lg bg-red-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-red-600/20 transition-all duration-300 hover:bg-red-700 hover:scale-[1.02] sm:w-auto"
             >
               Go Live
             </button>
