@@ -58,18 +58,23 @@ export const getMyPosts = async () => {
   return response.data
 }
 
-// ========================================================================
-// === YEH NAYA FUNCTION HAI: Ek post ko uski ID se fetch karega ===
-// ========================================================================
-/**
- * Fetches a single post by its unique ID.
- * @param {string} postId The ID of the post to fetch.
- */
 export const getPostById = async (postId) => {
   console.log(`[apiClient] getPostById function called for ID: ${postId}`)
   const response = await apiClient.get(`/posts/${postId}`)
   console.log('[apiClient] getPostById response received.')
   return response.data
+}
+
+// ===================================================================
+// === YEH NAYA FUNCTION LIVE STREAM CREATE KAREGA ===
+// ===================================================================
+/**
+ * Requests the backend to create a new Mux live stream.
+ * @param {{ title: string; description?: string }} streamData Data for the new stream.
+ */
+export const createLiveStream = async (streamData) => {
+  const response = await apiClient.post('/stream/create', streamData)
+  return response.data // Should return { streamKey, playbackId, ... }
 }
 
 export const getCurrentUser = async () => {

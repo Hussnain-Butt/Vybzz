@@ -1,0 +1,20 @@
+{
+  "name": "live-streaming-service",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "@mux/mux-node": "^8.3.0",
+    "@prisma/client": "^5.10.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-ws": "^5.0.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.10.2"
+  }
+}

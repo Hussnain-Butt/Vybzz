@@ -1,39 +1,51 @@
+# File: Backend/services/post-service/Dockerfile (MUKAMMAL AUR FINAL CODE)
+
 # ---------- build stage ----------
+# Yeh stage dependencies install karega aur Prisma client banayega
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
-# Accept a build-arg so CI or docker-compose can inject the DB URL at build time if desired.
-ARG DATABASE_URL=postgresql://postgres:postgres@postgres:5432/vybzz
+# Prisma ko database se connect karne ke liye build-time par URL chahiye hota hai
+ARG DATABASE_URL
 ENV DATABASE_URL=${DATABASE_URL}
 
-# Install build tools / dependencies
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci
 
-# Generate Prisma client. Prisma's generate step can read schema and env vars.
-# To avoid failures if DATABASE_URL is missing, the schema should reference env("DATABASE_URL").
-# We provide a default via the build arg above so generate won't fail in typical builds.
+# HAL: --unsafe-perm flag istemal karein. Yeh npm ko permissions kam karne se rokta hai,
+# jis se baad mein 'chown' command sahi se kaam karti hai.
+RUN npm ci --unsafe-perm
+
+# Prisma client generate karein
 RUN npx prisma generate
 
-# Copy app source
+# Baaki application code ko copy karein
 COPY . .
 
+
 # ---------- runtime stage ----------
+# Yeh stage application ko chalanay ke liye hai
 FROM node:20-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Add curl for healthchecks
+# Zaroori packages install karein (e.g., curl for healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy built node_modules and application from builder stage
+# Security ke liye ek non-root user banayein
+RUN useradd -m nodeuser
+
+# Pehle builder stage se saara code copy karein
 COPY --from=builder /app /app
 
-# Create non-root user
-RUN useradd -m nodeuser
+# YEH SABSE AHEM STEP HAI:
+# Saare code ki milkiyat (ownership) foran 'nodeuser' ko de dein.
+# Ab 'nodeuser' ko har file (node_modules samait) mein likhne ki ijazat hogi.
+RUN chown -R nodeuser:nodeuser /app
+
+# Ab non-root user par switch karein
 USER nodeuser
 
 EXPOSE 3003
-CMD ["npm","start"]
+CMD ["npm", "start"]

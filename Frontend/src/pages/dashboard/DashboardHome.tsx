@@ -22,10 +22,14 @@ import toast, { Toaster } from 'react-hot-toast'
 import { IoBarChart } from 'react-icons/io5'
 
 // Presumed imports for API and components
-import { getCurrentUser, uploadImages } from '../../api/apiClient.js'
+// =================================================================
+// === V.V.IMPORTANT: Naye functions aur components import kiye gaye hain ===
+// =================================================================
+import { getCurrentUser, uploadImages, createLiveStream } from '../../api/apiClient.js'
 import { OnboardingModal } from '../../components/creator/OnboardingModal'
 import { BannerCropModal } from '../../components/creator/BannerCropModal'
 import { ProfileCropModal } from '../../components/creator/ProfileCropModal'
+import { GoLiveModal } from '../../components/creator/GoLiveModal' // <-- NAYA MODAL IMPORT
 
 /* ========= Types (Unchanged) ========= */
 type TabKey = 'Home' | 'Collections' | 'Membership' | 'About'
@@ -369,11 +373,12 @@ const DashboardInfoCards = () => (
 
 /* ========= Main Screen (State and Layout updated for closable checklist) ========= */
 const DashboardHome: React.FC = () => {
+  // Existing State
   const [activeTab, setActiveTab] = useState<TabKey>('Home')
   const [isSetupModalOpen, setSetupModalOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [isChecklistMinimized, setIsChecklistMinimized] = useState(false)
-  const [isChecklistHidden, setIsChecklistHidden] = useState(false) // NEW state for hiding
+  const [isChecklistHidden, setIsChecklistHidden] = useState(false)
   const [bannerCropModalOpen, setBannerCropModalOpen] = useState(false)
   const [imageToCropForBanner, setImageToCropForBanner] = useState<string | null>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
@@ -383,6 +388,15 @@ const DashboardHome: React.FC = () => {
   const heroRef = useRef<HTMLDivElement | null>(null)
   const tabsRef = useRef<HTMLDivElement | null>(null)
   const queryClient = useQueryClient()
+
+  // ===========================================
+  // === NAYI STATE LIVE STREAMING KE LIYE ===
+  // ===========================================
+  const [isCreatingStream, setIsCreatingStream] = useState(false)
+  const [isGoLiveModalOpen, setIsGoLiveModalOpen] = useState(false)
+  const [streamDetails, setStreamDetails] = useState<{ streamKey: string | null }>({
+    streamKey: null,
+  })
 
   const {
     data: user,
@@ -432,8 +446,32 @@ const DashboardHome: React.FC = () => {
     }
   }
 
-  const handleGoLive = () => {
-    toast('Starting live stream!', { icon: '🔴' })
+  // =======================================================
+  // === GO LIVE FUNCTION AB MUKAMMAL LOGIC KE SATH HAI ===
+  // =======================================================
+  const handleGoLive = async () => {
+    if (!user) return // Agar user data load nahi hua to kuch na karein
+
+    setIsCreatingStream(true)
+    const goLiveToast = toast.loading('Preparing your live stream...')
+
+    try {
+      const streamTitle = `${user.name || 'My'}'s Live Stream`
+      const response = await createLiveStream({ title: streamTitle })
+
+      if (response && response.streamKey) {
+        setStreamDetails({ streamKey: response.streamKey })
+        setIsGoLiveModalOpen(true) // Modal ko open karein
+        toast.success('Your stream is ready!', { id: goLiveToast })
+      } else {
+        throw new Error('Stream key not found in API response.')
+      }
+    } catch (error) {
+      console.error('Failed to create live stream:', error)
+      toast.error('Could not start live stream. Please try again.', { id: goLiveToast })
+    } finally {
+      setIsCreatingStream(false)
+    }
   }
 
   const checklistItems = useMemo(() => {
@@ -445,7 +483,6 @@ const DashboardHome: React.FC = () => {
       { label: 'Add a banner image', done: !!profile.bannerUrl },
       { label: 'Describe your page', done: !!profile.bio && profile.bio.length > 10 },
       { label: 'Publish your page', done: profile.status === 'ACTIVE' },
-      // { label: 'Promote your page', done: false },
     ]
   }, [user])
 
@@ -595,7 +632,6 @@ const DashboardHome: React.FC = () => {
             </div>
           </div>
 
-          {/* ========= RESPONSIVE ACTION BUTTONS SECTION ========= */}
           <div className="mt-4 flex w-full shrink-0 flex-wrap justify-center gap-2 md:mt-0 md:w-auto md:flex-nowrap">
             <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[rgb(var(--color-surface-3))] transition hover:bg-[rgb(var(--color-surface-3))] sm:w-auto sm:px-3 sm:gap-2">
               <LuEye className="h-5 w-5" />
@@ -605,12 +641,16 @@ const DashboardHome: React.FC = () => {
               <LuShare2 className="h-5 w-5" />
               <span className="hidden sm:inline text-sm">Share</span>
             </button>
+            {/* ========= GO LIVE BUTTON AB LOADING STATE HANDLE KAREGA ========= */}
             <button
               onClick={handleGoLive}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-600 sm:w-auto sm:px-3 sm:gap-2 font-semibold"
+              disabled={isCreatingStream}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-600 sm:w-auto sm:px-3 sm:gap-2 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <LuRadio className="h-5 w-5" />
-              <span className="hidden sm:inline text-sm">Go Live</span>
+              <span className="hidden sm:inline text-sm">
+                {isCreatingStream ? 'Preparing...' : 'Go Live'}
+              </span>
             </button>
             <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white transition hover:bg-sky-600 sm:w-auto sm:px-3 sm:gap-2 font-semibold">
               <LuPlus className="h-5 w-5" />
@@ -745,6 +785,7 @@ const DashboardHome: React.FC = () => {
         </div>
       )}
 
+      {/* --- Modals --- */}
       <OnboardingModal
         open={isSetupModalOpen}
         onOpenChange={setSetupModalOpen}
@@ -766,6 +807,16 @@ const DashboardHome: React.FC = () => {
         onOpenChange={setProfileCropModalOpen}
         onCropComplete={(blob) => handleUploadCroppedImage(blob, 'profile')}
       />
+
+      {/* ========================================================== */}
+      {/* === NAYA GO LIVE MODAL YAHAN RENDER KIYA JAYEGA === */}
+      {/* ========================================================== */}
+      {isGoLiveModalOpen && streamDetails.streamKey && (
+        <GoLiveModal
+          streamKey={streamDetails.streamKey}
+          onClose={() => setIsGoLiveModalOpen(false)}
+        />
+      )}
     </div>
   )
 }
