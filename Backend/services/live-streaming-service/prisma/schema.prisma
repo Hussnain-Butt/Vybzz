@@ -1,0 +1,33 @@
+// File: Backend/services/live-streaming-service/prisma/schema.prisma (SAHI VERSION)
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model yahan se HATA diya gaya hai.
+
+model LiveStream {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+
+  streamKey   String @unique
+  playbackId  String @unique
+  muxStreamId String @unique
+
+  isLive Boolean @default(false)
+  
+  // Yahan User se relation nahi, sirf userId hai
+  userId String 
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}

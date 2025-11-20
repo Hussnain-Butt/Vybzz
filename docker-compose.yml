@@ -1,10 +1,8 @@
-# File: docker-compose.yml (COMPLETE AND FINAL UPDATED VERSION)
-
 name: vybzz-stack
 
 services:
   postgres:
-    image: postgres:16
+    image: postgres:17
     container_name: pg
     restart: unless-stopped
     environment:
@@ -12,7 +10,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: vybzz
     ports:
-      - '5432:5432'
+      - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -36,10 +34,16 @@ services:
       POST_URL: 'http://post-service:3003'
     ports:
       - '3000:3000'
+    volumes:
+      - ./Backend/api-gateway:/app
+      - /app/node_modules
     depends_on:
-      - auth-service
-      - user-service
-      - post-service
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_healthy
+      post-service:
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 10s
@@ -59,7 +63,9 @@ services:
     ports:
       - '3001:3001'
     depends_on:
-      - postgres
+      postgres:
+        # HAL: Isay bataya gaya hai ke postgres ke 'healthy' hone ka intezar kare.
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
       interval: 10s
@@ -73,8 +79,7 @@ services:
     container_name: user-service
     restart: unless-stopped
     environment:
-      # === DATABASE URL FIXED: Removed '?schema=users' ===
-      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz'
+      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz?schema=users'
       CLERK_WEBHOOK_SIGNING_SECRET: 'whsec_xeTb2X35/E+kbYPVLIU5ut6x8ND3bzzb'
       CLERK_SECRET_KEY: 'sk_test_0pqUaGtPfRk3MgllAFsqJCUCh0acO6OUEBKd7klwRn'
       CLERK_PUBLISHABLE_KEY: 'pk_test_d2VsY29tZS1kZWVyLTAuY2xlcmsuYWNjb3VudHMuZGV2JA'
@@ -89,16 +94,16 @@ services:
     ports:
       - '3002:3002'
     depends_on:
-      - postgres
+      postgres:
+        # HAL: Isay bataya gaya hai ke postgres ke 'healthy' hone ka intezar kare.
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
       interval: 10s
       timeout: 3s
       retries: 10
-    
     sysctls:
         net.ipv6.conf.all.disable_ipv6: 1
-   
 
   post-service:
     build:
@@ -109,8 +114,7 @@ services:
     env_file:
       - ./Backend/services/post-service/.env
     environment:
-      # === DATABASE URL FIXED: Removed '?schema=posts' ===
-      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz'
+      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz?schema=posts'
       PORT: '3003'
       NODE_ENV: 'development'
     dns:
@@ -119,11 +123,35 @@ services:
     ports:
       - '3003:3003'
     depends_on:
-      - postgres
+      postgres:
+        # HAL: YEH SABSE ZAROORI TABDEELI HAI.
+        # Ab yeh service postgres ke 'healthy' hone tak intezar karegi.
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3003/health']
       interval: 10s
       timeout: 3s
+      retries: 10
+
+  live-streaming-service:
+    build:
+      context: ./Backend/services/live-streaming-service
+      dockerfile: Dockerfile
+    container_name: live-streaming-service
+    restart: unless-stopped
+    env_file:
+      - ./Backend/services/live-streaming-service/.env
+    environment:
+      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vybzz?schema=livestreams'
+    ports:
+      - '3004:3004'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3004/health']
+      interval: 10s
+      timeout: 5s
       retries: 10
 
 volumes:
