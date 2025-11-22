@@ -1,6 +1,18 @@
 name: vybzz-stack
 
 services:
+
+   # ----- ADD THIS NEW SERVICE -----
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'  # Server ke port 80 ko container ke port 80 se map karein
+    depends_on:
+      - api-gateway
   postgres:
     image: postgres:17
     container_name: pg
@@ -134,6 +146,7 @@ services:
       retries: 10
 
   live-streaming-service:
+    # FIX: Ab hum 'build' directive istemal kar rahe hain taake FFMPEG install ho sake
     build:
       context: ./Backend/services/live-streaming-service
       dockerfile: Dockerfile

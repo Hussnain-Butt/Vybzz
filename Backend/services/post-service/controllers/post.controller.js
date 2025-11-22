@@ -221,9 +221,53 @@ const uploadMedia = async (req, res) => {
   }
 }
 
+const createPostFromStream = async (req, res) => {
+  // Is route par auth middleware nahi hai, isliye creatorId body se le rahe hain
+  const { creatorId, title, description, muxPlaybackId, muxAssetId } = req.body
+
+  if (!creatorId || !title || !muxPlaybackId) {
+    return res.status(400).json({ error: 'Missing required fields for VOD post creation.' })
+  }
+
+  try {
+    const newPost = await prisma.post.create({
+      data: {
+        title,
+        content: description || '', // Content mein description daal dein
+        creatorId: creatorId,
+        status: 'PUBLISHED', // VOD foran publish hojayega
+        accessLevel: 'FREE', // Aap isko 'PAID' bhi kar sakte hain agar chahein
+        publishedAt: new Date(),
+        mediaAssets: {
+          create: [
+            {
+              type: 'LIVESTREAM', // Ya 'VIDEO', schema ke mutabiq
+              url: `https://stream.mux.com/${muxPlaybackId}.m3u8`, // HLS URL
+              muxPlaybackId: muxPlaybackId,
+              muxAssetId: muxAssetId,
+            },
+          ],
+        },
+      },
+      include: {
+        mediaAssets: true,
+      },
+    })
+
+    console.log(
+      `[Post Service] VOD Post created successfully for user ${creatorId}. Post ID: ${newPost.id}`,
+    )
+    res.status(201).json(newPost)
+  } catch (error) {
+    console.error('Error creating post from stream:', error)
+    res.status(500).json({ error: 'Could not create post from stream.' })
+  }
+}
+
 module.exports = {
   createPost,
   getMyPosts,
   getPostById,
   uploadMedia,
+  createPostFromStream,
 }

@@ -1,8 +1,6 @@
-// File: Backend/services/live-streaming-service/prisma/schema.prisma (SAHI VERSION)
-
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

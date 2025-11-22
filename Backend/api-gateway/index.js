@@ -1,5 +1,3 @@
-// File: api-gateway/index.js (MUKAMMAL, FINAL, AUR SAHI CODE)
-
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
@@ -17,21 +15,17 @@ const POST_URL = DOCKER ? 'http://post-service:3003' : 'http://localhost:3003'
 const LIVE_STREAM_URL = DOCKER ? 'http://live-streaming-service:3004' : 'http://localhost:3004'
 
 // -------- Authentication Middleware --------
-// FIX: Isko ek simple array bana diya gaya hai for better readability and usage.
 const protect = [
   clerkMiddleware(),
   requireAuth(),
   (req, res, next) => {
-    // === YEH SABSE BADA FIX HAI ===
-    // 'req.auth' ko property ke bajaye function 'req.auth()' ke tor par call karein.
-    // Yeh deprecation warning ko fix karta hai aur middleware chain ko tootne se bachata hai.
-    const auth = req.auth()
+    const auth = req.auth
     const userId = auth?.userId
 
     if (userId) {
-      req.headers['x-user-id'] = userId // Header set karein
+      req.headers['x-user-id'] = userId
       console.log(`[GW Auth] User authenticated: ${userId}. Forwarding to service.`)
-      return next() // Agle middleware (proxy) par jayein
+      return next()
     } else {
       console.warn('[GW Auth Error] User ID not found after authentication.')
       return res.status(401).json({ error: 'User ID missing after authentication.' })
@@ -54,10 +48,9 @@ const createProxy = (target, pathRewrite = {}) => {
   return createProxyMiddleware({
     target,
     changeOrigin: true,
-    ws: true, // WebSocket support sab proxies ke liye enable kar dein
+    ws: true, // WebSocket support is enabled
     pathRewrite,
     onProxyReq: (proxyReq, req, res) => {
-      // Yeh log confirm karega ke request proxy tak pohanch gayi hai
       console.log(
         `[GW Proxy] Forwarding ${req.method} request from ${req.originalUrl} to ${target}${proxyReq.path}`,
       )
@@ -68,20 +61,39 @@ const createProxy = (target, pathRewrite = {}) => {
   })
 }
 
-// -------- Public Routes (In par authentication nahi chahiye) --------
+// =================================================================
+// === ROUTING SECTION ===
+// =================================================================
+
+// -------- Public Routes (No authentication required) --------
 app.use('/auth', createProxy(AUTH_URL))
-app.use('/webhooks', createProxy(USER_URL)) // /webhooks/clerk
+
+// --- Clerk Webhook Rule ---
 app.use(
-  '/stream/webhooks/mux',
-  createProxy(LIVE_STREAM_URL, {
-    '^/stream/webhooks/mux': '/webhooks/mux',
+  '/webhooks/clerk',
+  createProxy(USER_URL, {
+    '^/webhooks/clerk': '/webhooks/clerk',
   }),
 )
 
-// -------- Protected Routes (In par authentication lazmi hai) --------
+// --- Mux Webhook Rule ---
+app.use(
+  '/webhooks/mux',
+  createProxy(LIVE_STREAM_URL, {
+    '^/webhooks/mux': '/webhooks/mux',
+  }),
+)
+
+// -------- Protected Routes (Authentication required) --------
 app.use('/users', protect, createProxy(USER_URL))
 app.use('/posts', protect, createProxy(POST_URL, { '^/posts': '' }))
-app.use('/stream', protect, createProxy(LIVE_STREAM_URL, { '^/stream': '' }))
+
+// =================================================================
+// === FIX: REMOVED pathRewrite FROM STREAM PROXY ===
+// We want to forward the *entire* path (e.g., /stream/live/stream_key)
+// to the streaming service, not just a part of it.
+// =================================================================
+app.use('/stream', protect, createProxy(LIVE_STREAM_URL))
 
 // -------- Server Start --------
 const server = app.listen(PORT, () => {
@@ -90,10 +102,12 @@ const server = app.listen(PORT, () => {
   console.log('----------------------------------------------------')
   console.log('Routes configured:')
   console.log('🔒 PROTECTED: /users/*, /posts/*, /stream/*')
-  console.log('📢 PUBLIC:    /auth/*, /webhooks/*, /stream/webhooks/*')
+  console.log('📢 PUBLIC:    /auth/*, /webhooks/clerk, /webhooks/mux')
   console.log('----------------------------------------------------')
 })
 
+// This is necessary for the proxy to handle WebSocket upgrades.
 server.on('upgrade', (req, socket, head) => {
   console.log(`[GW] Detected WebSocket upgrade for: ${req.url}`)
+  // The http-proxy-middleware attached to the '/stream' route will automatically handle this.
 })

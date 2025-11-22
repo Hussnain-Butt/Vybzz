@@ -1,20 +1,18 @@
-// File: Backend/services/live-streaming-service/src/index.js (MUKAMMAL AUR SAHI CODE)
-
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const http = require('http')
-const expressWs = require('express-ws')
+const WebSocket = require('ws')
+const url = require('url')
 
 // Route handlers
 const streamHttpRoutes = require('./routes') // HTTP routes (POST /create, etc.)
-const setupStreamingRoutes = require('./streaming') // Naye function ko import karein
+const setupStreamingRoutes = require('./streaming') // WebSocket route setup function
 
 const app = express()
 const server = http.createServer(app)
 
-// `express-ws` ko initialize karein. Yeh `app` object mein `.ws()` method daal dega.
-const wss = expressWs(app, server)
+const wss = new WebSocket.Server({ noServer: true })
 
 const PORT = process.env.PORT || 3004
 
@@ -25,14 +23,45 @@ app.use(express.json())
 // Health Check Endpoint
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }))
 
-// API Routes (HTTP) - Yeh pehle ki tarah kaam karenge
+// API Routes (HTTP)
 app.use('/', streamHttpRoutes)
 
-// WebSocket Routes ko setup karein
-// Hum yahan function ko call karke `app` object pass kar rahe hain
-setupStreamingRoutes(app)
+// Pass the WebSocketServer instance (wss) to our streaming setup.
+setupStreamingRoutes(wss)
 
-// App ke bajaye `server` ko listen karein taake WebSockets bhi kaam karein
+// This is the core of the fix. We listen for the HTTP 'upgrade' event.
+server.on('upgrade', (request, socket, head) => {
+  try {
+    const pathname = url.parse(request.url).pathname
+
+    // Only accept paths that start with /stream/live/
+    if (pathname && pathname.startsWith('/stream/live/')) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        // Emit connection so streaming.js can pick it up
+        wss.emit('connection', ws, request)
+      })
+    } else {
+      // For any other path, politely reject and destroy the socket
+      console.warn(`[WebSocket] Rejecting connection for unknown path: ${pathname}`)
+      socket.write('HTTP/1.1 404 Not Found\r\n\r\n')
+      socket.destroy()
+    }
+  } catch (err) {
+    console.error('[upgrade] Error handling upgrade:', err)
+    try {
+      socket.destroy()
+    } catch (e) {
+      // ignore
+    }
+  }
+})
+
+// Graceful shutdown wiring (so ffmpeg processes can be cleaned up by streaming module)
+process.on('SIGINT', () => {
+  console.log('SIGINT received — shutting down HTTP server.')
+  server.close(() => process.exit(0))
+})
+
 server.listen(PORT, () => {
   console.log('-------------------------------------------')
   console.log(`🚀 Live Streaming Service (HTTP & WS) is running on port ${PORT}`)

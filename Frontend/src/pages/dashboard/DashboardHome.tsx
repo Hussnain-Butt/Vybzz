@@ -474,6 +474,31 @@ const DashboardHome: React.FC = () => {
     }
   }
 
+  // =======================================================
+  // === UX IMPROVEMENT: LIVE MODAL BAND HONE PAR REFRESH ===
+  // =======================================================
+  const handleCloseGoLiveModal = () => {
+    setIsGoLiveModalOpen(false)
+
+    // User ko batayein ke refresh ho raha hai
+    const toastId = toast.loading('Refreshing your posts...')
+
+    // Kuch waqt (e.g., 2 seconds) ke baad posts ki query ko invalidate karein
+    setTimeout(() => {
+      // NOTE: 'myPosts' aapki woh query key honi chahiye jo aap posts fetch karne ke liye istemal karte hain.
+      // Agar aapne posts ko isi component mein fetch kiya hai ya kisi child component mein,
+      // yeh un sab ko refresh kar dega jahan yeh key istemal ho rahi hai.
+      queryClient
+        .invalidateQueries('myPosts')
+        .then(() => {
+          toast.success('Posts updated!', { id: toastId })
+        })
+        .catch(() => {
+          toast.error('Could not refresh posts.', { id: toastId })
+        })
+    }, 2000) // 2 second ka delay
+  }
+
   const checklistItems = useMemo(() => {
     const profile = user?.creatorProfile
     if (!profile) return []
@@ -809,13 +834,10 @@ const DashboardHome: React.FC = () => {
       />
 
       {/* ========================================================== */}
-      {/* === NAYA GO LIVE MODAL YAHAN RENDER KIYA JAYEGA === */}
+      {/* === NAYA GO LIVE MODAL YAHAN RENDER KIYA JAYEGA (UPDATED) === */}
       {/* ========================================================== */}
       {isGoLiveModalOpen && streamDetails.streamKey && (
-        <GoLiveModal
-          streamKey={streamDetails.streamKey}
-          onClose={() => setIsGoLiveModalOpen(false)}
-        />
+        <GoLiveModal streamKey={streamDetails.streamKey} onClose={handleCloseGoLiveModal} />
       )}
     </div>
   )

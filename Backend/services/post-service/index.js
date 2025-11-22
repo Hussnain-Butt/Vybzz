@@ -5,6 +5,7 @@ const express = require('express')
 const cors = require('cors')
 const postRoutes = require('./routes/post.routes')
 const { prisma } = require('./db/prisma') // Prisma client ko import karein
+const internalRoutes = require('./routes/internal.routes') // <-- Naya route import karein
 
 const PORT = process.env.PORT || 3003
 const app = express()
@@ -18,12 +19,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // Health check endpoint
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
-// API Routes
-app.use('/posts', postRoutes)
+// =================================================================
+// === YEH SABSE ZAROORI CHANGE HAI ===
+// =================================================================
+// API Gateway pehle se hi `/posts` ke requests ko is service par bhej raha hai.
+// Isliye, is service ko dobara `/posts` prefix lagane ki zaroorat nahi hai.
+// Hum yahan root path (`/`) par routes ko mount karenge.
+// Pehle: app.use('/posts', postRoutes)
+// Ab: app.use('/', postRoutes)
+app.use('/', postRoutes)
 
 // ----------------------------------------------------------------
 // YAHAN SE UPDATE HUA HAI - DATABASE CONNECTION LOGIC
 // ----------------------------------------------------------------
+app.use('/internal', internalRoutes) // <-- Naye internal routes yahan register karein
 
 // Server ko start karne wala function
 const startServer = async () => {
