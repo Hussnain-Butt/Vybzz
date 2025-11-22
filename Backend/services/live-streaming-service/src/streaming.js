@@ -1,353 +1,129 @@
-/**
- * streaming.js
- * Robust, optimized FFmpeg pipeline for ingesting WebM binary frames over WebSocket
- * and forwarding to an RTMPS endpoint (Mux).
- *
- * Replaces previous streaming.js. Copy-paste entire file.
- */
+// streaming.js
 
 const { spawn } = require('child_process')
 const url = require('url')
-const os = require('os')
 
-// In-memory state for active streams
+// In-memory store for active ffmpeg processes
 const streams = {}
 
-/** Configurable tuning via environment variables */
-const FFMPEG_BITRATE = process.env.FFMPEG_BITRATE || '2500k' // target video bitrate
-const FFMPEG_MAXRATE = process.env.FFMPEG_MAXRATE || '2800k'
-const FFMPEG_BUF_SIZE = process.env.FFMPEG_BUF_SIZE || '4000k'
-const FFMPEG_PRESET = process.env.FFMPEG_PRESET || 'veryfast'
-const FFMPEG_THREADS = process.env.FFMPEG_THREADS || '0' // 0 => auto
-const FFMPEG_GOP_FACTOR = Number(process.env.FFMPEG_GOP_FACTOR || 2) // gop = fps * factor
-const FFMPEG_RESTART_LIMIT = Number(process.env.FFMPEG_RESTART_LIMIT || 3) // restarts per WINDOW
-const FFMPEG_RESTART_WINDOW_MS = Number(process.env.FFMPEG_RESTART_WINDOW_MS || 60_000) // 60s
-
-// Backpressure queue config
-const MAX_QUEUE_FRAMES = Number(process.env.MAX_QUEUE_FRAMES || 60) // how many chunks we buffer max per stream
-
-// Small utility: bounded FIFO queue
-class BoundedQueue {
-  constructor(limit) {
-    this.limit = limit
-    this.queue = []
-  }
-  push(item) {
-    if (this.queue.length >= this.limit) {
-      // Drop the oldest frame to make room (tail drop is safer for live)
-      this.queue.shift()
-    }
-    this.queue.push(item)
-  }
-  shift() {
-    return this.queue.shift()
-  }
-  get length() {
-    return this.queue.length
-  }
-  clear() {
-    this.queue.length = 0
-  }
-}
-
-// Helper that spawns ffmpeg with tuned args and returns { ffmpegProc, stdin }
-function spawnFfmpegForStream(rtmpUrl, fps = 30) {
-  const gop = Math.max(2, Math.floor(fps * FFMPEG_GOP_FACTOR))
-
+function spawnFfmpeg(rtmpUrl, streamKey) {
   const args = [
-    '-fflags',
-    'nobuffer',
+    // --- Input Options ---
     '-hide_banner',
     '-loglevel',
-    'warning',
-
-    // Input (stdin) as webm container
+    'debug', // MAXIMUM LOGGING! This will show everything.
     '-f',
     'webm',
     '-i',
     '-',
 
-    // Video encoding
+    // --- Video Options ---
     '-c:v',
     'libx264',
     '-preset',
-    FFMPEG_PRESET,
+    'veryfast',
     '-tune',
     'zerolatency',
-    '-profile:v',
-    'main',
     '-pix_fmt',
     'yuv420p',
-    '-r',
-    String(fps),
-    '-g',
-    String(gop),
-    '-keyint_min',
-    String(gop),
     '-b:v',
-    FFMPEG_BITRATE,
+    '2500k',
     '-maxrate',
-    FFMPEG_MAXRATE,
+    '3000k',
     '-bufsize',
-    FFMPEG_BUF_SIZE,
-    '-threads',
-    String(FFMPEG_THREADS),
+    '4000k',
+    '-g',
+    '60', // Keyframe every 2 seconds for 30fps stream
 
-    // Audio encoding
+    // --- Audio Options ---
     '-c:a',
     'aac',
-    '-ar',
-    '44100',
     '-b:a',
     '128k',
-    '-ac',
-    '2',
+    '-ar',
+    '44100',
 
-    // Output to RTMP(s)
+    // --- Output Options ---
     '-f',
     'flv',
     rtmpUrl,
   ]
 
-  // Spawn with stdio pipes so we can push binary to stdin
-  const ffmpeg = spawn('ffmpeg', args, { stdio: ['pipe', 'pipe', 'pipe'] })
-  return ffmpeg
-}
+  console.log(`[FFMPEG] Spawning for stream ${streamKey} with args: ffmpeg ${args.join(' ')}`)
+  const ffmpeg = spawn('ffmpeg', args)
 
-// Simple restart limiter per streamKey to avoid crash loop
-function makeRestartTracker() {
-  let attempts = []
-  return {
-    record() {
-      const now = Date.now()
-      attempts.push(now)
-      // prune older than window
-      attempts = attempts.filter((t) => now - t <= FFMPEG_RESTART_WINDOW_MS)
-      return attempts.length
-    },
-    reset() {
-      attempts = []
-    },
-  }
+  // *** CRITICAL FOR DEBUGGING ***
+  // Listen to FFmpeg's output streams to catch any errors or info
+  ffmpeg.stderr.on('data', (data) => {
+    console.error(`[FFMPEG STDERR - ${streamKey}]: ${data.toString()}`)
+  })
+
+  ffmpeg.stdout.on('data', (data) => {
+    console.log(`[FFMPEG STDOUT - ${streamKey}]: ${data.toString()}`)
+  })
+
+  ffmpeg.on('close', (code, signal) => {
+    console.warn(`[FFMPEG - ${streamKey}] Process exited with code ${code}, signal ${signal}`)
+  })
+
+  ffmpeg.on('error', (err) => {
+    console.error(`[FFMPEG - ${streamKey}] Failed to start process:`, err.message)
+  })
+
+  ffmpeg.stdin.on('error', (err) => {
+    console.error(`[FFMPEG STDIN Error - ${streamKey}]:`, err.message)
+  })
+
+  return ffmpeg
 }
 
 module.exports = function setupStreamingRoutes(wss) {
   wss.on('connection', (ws, req) => {
-    // Defensive try/catch for whole connection lifecycle
-    try {
-      const pathname = url.parse(req.url).pathname || ''
-      const parts = pathname.split('/')
-      const streamKey = parts[parts.length - 1]
+    const pathname = url.parse(req.url).pathname || ''
+    const parts = pathname.split('/')
+    const streamKey = parts[parts.length - 1]
 
-      if (!streamKey) {
-        console.error('[Streaming Service] Stream key missing. Closing connection.')
-        try {
-          ws.close()
-        } catch (e) {}
-        return
+    if (!streamKey) {
+      console.error('[WS] Connection rejected: Stream key missing.')
+      ws.close()
+      return
+    }
+
+    console.log(`[WS] Client connected for stream key: ${streamKey}`)
+    const rtmpUrl = `rtmps://global-live.mux.com:443/app/${streamKey}`
+
+    const ffmpeg = spawnFfmpeg(rtmpUrl, streamKey)
+    streams[streamKey] = ffmpeg
+
+    ws.on('message', (message) => {
+      // Forward the binary message from the browser to FFmpeg's standard input
+      if (ffmpeg.stdin && ffmpeg.stdin.writable) {
+        ffmpeg.stdin.write(message)
+      } else {
+        console.warn(`[WS - ${streamKey}] FFmpeg stdin not writable, dropping frame.`)
       }
+    })
 
-      console.log(`[Streaming Service] WS connected for streamKey=${streamKey}`)
+    ws.on('close', (code, reason) => {
+      // The reason buffer needs to be converted to a string to be readable
+      const reasonString = reason ? reason.toString() : 'No reason given'
+      console.log(
+        `[WS] Client disconnected for stream key: ${streamKey}. Code: ${code}, Reason: ${reasonString}`,
+      )
 
-      const rtmpUrl = `rtmps://global-live.mux.com:443/app/${streamKey}`
-
-      // Per-connection state
-      const state = {
-        ffmpeg: null,
-        queue: new BoundedQueue(MAX_QUEUE_FRAMES),
-        writable: true, // whether ffmpeg.stdin returned true recently
-        fps: 30,
-        restartTracker: makeRestartTracker(),
-      }
-
-      // Spawn ffmpeg
-      function startFfmpeg() {
-        if (state.ffmpeg) {
-          console.warn(`[Streaming Service] ffmpeg already running for ${streamKey}`)
-          return
-        }
-
-        console.log(`[Streaming Service] Spawning ffmpeg for ${streamKey} -> ${rtmpUrl}`)
-        const ffmpeg = spawnFfmpegForStream(rtmpUrl, state.fps)
-        state.ffmpeg = ffmpeg
-
-        // pipe stderr for diagnostics
-        ffmpeg.stderr.on('data', (d) => {
-          // keep limited logs to avoid flooding
-          const msg = d.toString()
-          console.error(`FFMPEG stderr [${streamKey}]: ${msg.slice(0, 1000)}`)
-        })
-
-        ffmpeg.stdout.on('data', () => {
-          // usually unused for ffmpeg -> rtmp, kept for future usage
-        })
-
-        ffmpeg.on('error', (err) => {
-          console.error(`FFMPEG failed to start [${streamKey}]:`, err && err.message)
-        })
-
-        ffmpeg.stdin.on('drain', () => {
-          // ffmpeg consumed buffered data; resume accepting frames
-          state.writable = true
-          // flush queued frames until drain returns false again
-          flushQueueToFfmpeg()
-        })
-
-        ffmpeg.stdin.on('error', (err) => {
-          console.error(`ffmpeg.stdin error [${streamKey}]:`, err && err.message)
-        })
-
-        ffmpeg.on('close', (code, signal) => {
-          console.warn(`FFMPEG exited [${streamKey}] code=${code} signal=${signal}`)
-          state.ffmpeg = null
-          // decide whether to restart ffmpeg
-          const attempts = state.restartTracker.record()
-          if (attempts <= FFMPEG_RESTART_LIMIT) {
-            console.log(
-              `[Streaming Service] Restart attempt ${attempts}/${FFMPEG_RESTART_LIMIT} for ${streamKey}`,
-            )
-            // small backoff before restart
-            setTimeout(() => {
-              if (ws.readyState === ws.OPEN) {
-                startFfmpeg()
-              } else {
-                // ws closed — cleanup
-                cleanup()
-              }
-            }, 1000 * attempts) // increasing backoff
-          } else {
-            console.error(
-              `[Streaming Service] Restart limit reached for ${streamKey}. Not restarting.`,
-            )
-            // notify client if possible and close ws
-            try {
-              if (ws.readyState === ws.OPEN) ws.close()
-            } catch (e) {}
-            cleanup()
-          }
-        })
-      }
-
-      function flushQueueToFfmpeg() {
-        if (!state.ffmpeg || !state.ffmpeg.stdin || state.ffmpeg.stdin.destroyed) {
-          return
-        }
-        // flush while writable
-        while (state.writable && state.queue.length > 0) {
-          const buf = state.queue.shift()
-          try {
-            const ok = state.ffmpeg.stdin.write(buf)
-            if (!ok) {
-              state.writable = false
-            }
-          } catch (err) {
-            console.error(
-              `[Streaming Service] Error writing queued frame to ffmpeg for ${streamKey}:`,
-              err && err.message,
-            )
-            // if write fails, drop remaining queued frames to avoid memory growth
-            state.queue.clear()
-            state.writable = false
-            break
-          }
-        }
-      }
-
-      function cleanup() {
-        // kill ffmpeg if running
-        if (state.ffmpeg) {
-          try {
-            state.ffmpeg.kill('SIGINT')
-          } catch (e) {}
-          state.ffmpeg = null
-        }
-        // clear queue
-        try {
-          state.queue.clear()
-        } catch (e) {}
+      if (streams[streamKey]) {
+        console.log(`[FFMPEG] Terminating process for stream key: ${streamKey}`)
+        streams[streamKey].kill('SIGINT') // Gracefully kill FFmpeg
         delete streams[streamKey]
       }
+    })
 
-      // initialize ffmpeg
-      startFfmpeg()
-
-      // store connection state
-      streams[streamKey] = { ws, state }
-
-      // Accept only binary frames; ignore/parse text control frames optionally
-      ws.on('message', (msg, isBinary) => {
-        if (!isBinary) {
-          // allow small JSON control messages (e.g., {"type":"meta","fps":24})
-          try {
-            const s = msg.toString()
-            if (s && (s.startsWith('{') || s.startsWith('['))) {
-              const parsed = JSON.parse(s)
-              if (parsed && parsed.type === 'meta' && parsed.fps) {
-                const newFps = Number(parsed.fps) || state.fps
-                if (newFps !== state.fps) {
-                  console.log(
-                    `[Streaming Service] fps meta updated for ${streamKey}: ${state.fps} -> ${newFps}`,
-                  )
-                  state.fps = newFps
-                  // restart ffmpeg to apply new fps/gop if needed
-                  if (state.ffmpeg) {
-                    try {
-                      state.ffmpeg.kill('SIGINT')
-                    } catch (e) {}
-                    // ffmpeg 'close' handler will try restart with new fps
-                  }
-                }
-              }
-            } else {
-              // ignore freeform text
-            }
-          } catch (e) {
-            console.warn(`[Streaming Service] Ignoring non-binary WS message for ${streamKey}`)
-          }
-          return
-        }
-
-        // msg is Buffer (binary chunk)
-        if (!state.ffmpeg || !state.ffmpeg.stdin || state.ffmpeg.stdin.destroyed) {
-          // queue up frames while ffmpeg is down (bounded)
-          state.queue.push(msg)
-          return
-        }
-
-        // Try to write directly; if backpressure, push to queue
-        try {
-          const ok = state.ffmpeg.stdin.write(msg)
-          if (!ok) {
-            state.writable = false
-            // push to queue so drain handler continues flushing afterwards
-            state.queue.push(msg)
-          }
-        } catch (err) {
-          console.error(
-            `[Streaming Service] Error writing to ffmpeg.stdin for ${streamKey}:`,
-            err && err.message,
-          )
-          // try to queue as fallback
-          try {
-            state.queue.push(msg)
-          } catch (e) {}
-        }
-      })
-
-      ws.on('close', () => {
-        console.log(`[Streaming Service] WS disconnected for ${streamKey}`)
-        cleanup()
-      })
-
-      ws.on('error', (err) => {
-        console.error(`[Streaming Service] WS error for ${streamKey}:`, err && (err.message || err))
-        cleanup()
-      })
-    } catch (err) {
-      console.error('[Streaming Service] Unexpected connection error:', err && err.message)
-      try {
-        ws.close()
-      } catch (e) {}
-    }
+    ws.on('error', (err) => {
+      console.error(`[WS - ${streamKey}] Error:`, err.message)
+      if (streams[streamKey]) {
+        streams[streamKey].kill('SIGINT')
+        delete streams[streamKey]
+      }
+    })
   })
 }

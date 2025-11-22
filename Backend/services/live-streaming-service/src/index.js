@@ -33,16 +33,26 @@ setupStreamingRoutes(wss)
 server.on('upgrade', (request, socket, head) => {
   try {
     const pathname = url.parse(request.url).pathname
+    console.log(`[Streaming Service] WebSocket upgrade requested for path: ${pathname}`)
 
-    // Only accept paths that start with /stream/live/
-    if (pathname && pathname.startsWith('/stream/live/')) {
+    // Accept both formats:
+    // 1. /stream/live/:key (direct from frontend/nginx)
+    // 2. /:key (from API Gateway after Express strips /stream/live)
+    const isFullPath = pathname && pathname.startsWith('/stream/live/')
+    const isStrippedPath = pathname && pathname.length > 1 && pathname.match(/^\/[^\/]+$/) // Matches /:key (no additional slashes)
+    const isValidPath = isFullPath || isStrippedPath
+
+    console.log(`[Streaming Service] Path validation - isFullPath: ${isFullPath}, isStrippedPath: ${isStrippedPath}, isValid: ${isValidPath}`)
+
+    if (isValidPath) {
+      console.log(`[Streaming Service] ✅ Accepting WebSocket upgrade for: ${pathname}`)
       wss.handleUpgrade(request, socket, head, (ws) => {
         // Emit connection so streaming.js can pick it up
         wss.emit('connection', ws, request)
       })
     } else {
       // For any other path, politely reject and destroy the socket
-      console.warn(`[WebSocket] Rejecting connection for unknown path: ${pathname}`)
+      console.warn(`[WebSocket] ❌ Rejecting connection for unknown path: ${pathname}`)
       socket.write('HTTP/1.1 404 Not Found\r\n\r\n')
       socket.destroy()
     }

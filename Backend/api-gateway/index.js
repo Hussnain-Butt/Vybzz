@@ -1,5 +1,8 @@
+// gateway.js
+
 require('dotenv').config()
 const express = require('express')
+const http = require('http')
 const cors = require('cors')
 const { createProxyMiddleware } = require('http-proxy-middleware')
 const { clerkMiddleware, requireAuth } = require('@clerk/express')
@@ -19,22 +22,18 @@ const protect = [
   clerkMiddleware(),
   requireAuth(),
   (req, res, next) => {
-    const auth = req.auth
-    const userId = auth?.userId
-
+    const userId = req.auth?.userId
     if (userId) {
       req.headers['x-user-id'] = userId
-      console.log(`[GW Auth] User authenticated: ${userId}. Forwarding to service.`)
       return next()
-    } else {
-      console.warn('[GW Auth Error] User ID not found after authentication.')
-      return res.status(401).json({ error: 'User ID missing after authentication.' })
     }
+    return res.status(401).json({ error: 'User ID missing after authentication.' })
   },
 ]
 
 // -------- App setup --------
 const app = express()
+const server = http.createServer(app)
 app.set('trust proxy', 1)
 app.use(cors())
 app.use((req, res, next) => {
@@ -43,71 +42,67 @@ app.use((req, res, next) => {
 })
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
-// -------- Helper for creating proxy with logging --------
-const createProxy = (target, pathRewrite = {}) => {
-  return createProxyMiddleware({
-    target,
-    changeOrigin: true,
-    ws: true, // WebSocket support is enabled
-    pathRewrite,
-    onProxyReq: (proxyReq, req, res) => {
-      console.log(
-        `[GW Proxy] Forwarding ${req.method} request from ${req.originalUrl} to ${target}${proxyReq.path}`,
-      )
-    },
-    onError: (err, req, res) => {
-      console.error('[GW Proxy] Error:', err)
-    },
-  })
+// -------- Proxy Creation --------
+const defaultProxyOptions = {
+  changeOrigin: true,
+  onError: (err, req, res) => {
+    console.error('[GW Proxy Error]', err)
+    if (res && !res.headersSent) {
+      res.status(502).send('Proxy error occurred')
+    }
+  },
 }
 
-// =================================================================
-// === ROUTING SECTION ===
-// =================================================================
+// -------- Public Routes --------
+app.use('/auth', createProxyMiddleware({ ...defaultProxyOptions, target: AUTH_URL }))
+app.use('/webhooks/clerk', createProxyMiddleware({ ...defaultProxyOptions, target: USER_URL }))
+app.use('/webhooks/mux', createProxyMiddleware({ ...defaultProxyOptions, target: LIVE_STREAM_URL }))
 
-// -------- Public Routes (No authentication required) --------
-app.use('/auth', createProxy(AUTH_URL))
+// -------- Protected Routes --------
+app.use('/users', protect, createProxyMiddleware({ ...defaultProxyOptions, target: USER_URL }))
+app.use('/posts', protect, createProxyMiddleware({ ...defaultProxyOptions, target: POST_URL }))
 
-// --- Clerk Webhook Rule ---
+// -------- Streaming Routes (Special Handling) --------
+// 1. HTTP routes for streaming (e.g., creating a stream) - PROTECTED
 app.use(
-  '/webhooks/clerk',
-  createProxy(USER_URL, {
-    '^/webhooks/clerk': '/webhooks/clerk',
-  }),
+  '/stream',
+  protect,
+  createProxyMiddleware({ ...defaultProxyOptions, target: LIVE_STREAM_URL, ws: false }),
 )
 
-// --- Mux Webhook Rule ---
-app.use(
-  '/webhooks/mux',
-  createProxy(LIVE_STREAM_URL, {
-    '^/webhooks/mux': '/webhooks/mux',
-  }),
-)
+// 2. WebSocket proxy for the actual live stream - PUBLIC
+// *** THIS IS THE FIX ***
+// We create the proxy with the target configuration first...
+const wsProxy = createProxyMiddleware({
+  ...defaultProxyOptions,
+  target: LIVE_STREAM_URL,
+  ws: true,
+  logLevel: 'debug',
+})
+// ...and then apply it to the specific path.
+app.use('/stream/live', wsProxy)
 
-// -------- Protected Routes (Authentication required) --------
-app.use('/users', protect, createProxy(USER_URL))
-app.use('/posts', protect, createProxy(POST_URL, { '^/posts': '' }))
-
-// =================================================================
-// === FIX: REMOVED pathRewrite FROM STREAM PROXY ===
-// We want to forward the *entire* path (e.g., /stream/live/stream_key)
-// to the streaming service, not just a part of it.
-// =================================================================
-app.use('/stream', protect, createProxy(LIVE_STREAM_URL))
-
-// -------- Server Start --------
-const server = app.listen(PORT, () => {
-  console.log('----------------------------------------------------')
-  console.log(`🚀 API Gateway (SMART & SECURE) is listening on http://localhost:${PORT}`)
-  console.log('----------------------------------------------------')
-  console.log('Routes configured:')
-  console.log('🔒 PROTECTED: /users/*, /posts/*, /stream/*')
-  console.log('📢 PUBLIC:    /auth/*, /webhooks/clerk, /webhooks/mux')
-  console.log('----------------------------------------------------')
+// -------- WebSocket Upgrade Handling --------
+// Attach the wsProxy's upgrade handler to the server.
+// This allows http-proxy-middleware to handle the WebSocket handshake.
+server.on('upgrade', (req, socket, head) => {
+  const pathname = req.url || ''
+  if (pathname.startsWith('/stream/live/')) {
+    console.log(`[GW] Delegating WebSocket upgrade for ${pathname} to wsProxy.`)
+    wsProxy.upgrade(req, socket, head)
+  } else {
+    console.warn(`[GW] No WebSocket proxy configured for ${pathname}. Destroying socket.`)
+    socket.destroy()
+  }
 })
 
-// This is necessary for the proxy to handle WebSocket upgrades.
-server.on('upgrade', (req, socket, head) => {
-  console.log(`[GW] Detected WebSocket upgrade for: ${req.url}`)
-  // The http-proxy-middleware attached to the '/stream' route will automatically handle this.
+// -------- Server Start --------
+server.listen(PORT, () => {
+  console.log('----------------------------------------------------')
+  console.log(`🚀 API Gateway is listening on http://localhost:${PORT}`)
+  console.log('----------------------------------------------------')
+  console.log('Routes configured:')
+  console.log('🔒 PROTECTED: /users, /posts, /stream (for HTTP create)')
+  console.log('📢 PUBLIC:    /auth, /webhooks, /stream/live (for WebSocket)')
+  console.log('----------------------------------------------------')
 })
