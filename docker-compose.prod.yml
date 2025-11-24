@@ -1,0 +1,295 @@
+# =============================================================================
+# VYBZZ PRODUCTION DOCKER COMPOSE
+# =============================================================================
+# یہ production environment کے لیے Docker Compose configuration ہے
+# This is the Docker Compose configuration for production environment
+#
+# USAGE / استعمال:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# یہ file docker-compose.yml کے ساتھ merge ہوتی ہے اور production-specific
+# settings override کرتی ہے
+#
+# This file merges with docker-compose.yml and overrides settings with
+# production-specific configurations
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # FRONTEND SERVICE (Production)
+  # ===========================================================================
+  frontend:
+    # Production میں Dockerfile.dev کی بجائے standard Dockerfile استعمال کریں
+    # Use standard Dockerfile instead of Dockerfile.dev in production
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile  # Already optimized multi-stage build
+    
+    # Container restart policy
+    # اگر container fail ہو تو automatically restart ہو
+    restart: always
+    
+    # Production میں volume mounts نہیں چاہیے (security + performance)
+    # No volume mounts in production (security + performance)
+    volumes: []
+    
+    # Environment variables (production)
+    environment:
+      - NODE_ENV=production
+    
+    # Production میں صرف port 80 expose کریں
+    # Only expose port 80 in production
+    ports:
+      - "80:80"
+    
+    # Health check (make sure Nginx is responding)
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================================================================
+  # POSTGRESQL DATABASE (Production)
+  # ===========================================================================
+  postgres:
+    # Production میں restart policy always ہونی چاہیے
+    # Restart policy should be always in production
+    restart: always
+    
+    # Production credentials (environment variables سے آئیں گے)
+    # Production credentials (will come from environment variables)
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-vybzz}
+    
+    # Volume mount (data persistence)
+    # Production میں named volume استعمال کریں
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    
+    # Health check improvements
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-vybzz} || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ===========================================================================
+  # API GATEWAY (Production)
+  # ===========================================================================
+  api-gateway:
+    # Production Dockerfile استعمال کریں
+    # Use production Dockerfile
+    build:
+      context: ./Backend/api-gateway
+      dockerfile: Dockerfile.prod  # Will create this
+      args:
+        NODE_ENV: production
+    
+    restart: always
+    
+    # Production میں source code mount نہیں کرتے
+    # Don't mount source code in production
+    volumes: []
+    
+    environment:
+      NODE_ENV: production
+      DOCKER: 'true'
+      # Service URLs (internal Docker network)
+      AUTH_URL: 'http://auth-service:3001'
+      USER_URL: 'http://user-service:3002'
+      POST_URL: 'http://post-service:3003'
+      LIVESTREAM_URL: 'http://live-streaming-service:3004'
+    
+    # Health check
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================================================================
+  # AUTH SERVICE (Production)
+  # ===========================================================================
+  auth-service:
+    # Production Dockerfile already exists اور optimized ہے
+    # Production Dockerfile already exists and is optimized
+    build:
+      context: ./Backend/services/auth-service
+      dockerfile: Dockerfile  # Already production-ready
+      args:
+        NODE_ENV: production
+    
+    restart: always
+    volumes: []
+    
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+    
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================================================================
+  # USER SERVICE (Production)
+  # ===========================================================================
+  user-service:
+    # Production Dockerfile already exists with Prisma support
+    build:
+      context: ./Backend/services/user-service
+      dockerfile: Dockerfile  # Already production-ready with Prisma
+      args:
+        NODE_ENV: production
+        DATABASE_URL: ${USER_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=users}
+    
+    restart: always
+    volumes: []
+    
+    environment:
+      NODE_ENV: production
+      PORT: '3002'
+      DATABASE_URL: ${USER_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=users}
+    
+    # DNS settings (IPv6 disable - stability)
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 1
+    
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # Prisma migrations کے لیے زیادہ وقت
+
+  # ===========================================================================
+  # POST SERVICE (Production)
+  # ===========================================================================
+  post-service:
+    build:
+      context: ./Backend/services/post-service
+      dockerfile: Dockerfile.prod  # Will create optimized version
+      args:
+        NODE_ENV: production
+        DATABASE_URL: ${POST_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=posts}
+    
+    restart: always
+    volumes: []
+    
+    environment:
+      NODE_ENV: production
+      PORT: '3003'
+      DATABASE_URL: ${POST_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=posts}
+    
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 1
+    
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3003/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ===========================================================================
+  # LIVE STREAMING SERVICE (Production)
+  # ===========================================================================
+  live-streaming-service:
+    build:
+      context: ./Backend/services/live-streaming-service
+      dockerfile: Dockerfile  # Already has FFMPEG installed
+      args:
+        NODE_ENV: production
+        DATABASE_URL: ${LIVESTREAM_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=livestreams}
+    
+    restart: always
+    volumes: []
+    
+    environment:
+      NODE_ENV: production
+      PORT: '3004'
+      DATABASE_URL: ${LIVESTREAM_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=livestreams}
+    
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3004/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# =============================================================================
+# VOLUMES (Production)
+# =============================================================================
+volumes:
+  # PostgreSQL data persistence
+  # یہ named volume database کا data store کرے گا
+  # This named volume will store database data
+  pg_data:
+    driver: local
+
+# =============================================================================
+# NETWORKS (Optional - اگر specific network config چاہیے)
+# =============================================================================
+# networks:
+#   vybzz-network:
+#     driver: bridge
+
+# =============================================================================
+# NOTES / نوٹس
+# =============================================================================
+#
+# 1. ENVIRONMENT VARIABLES:
+#    Production میں .env files استعمال کریں یا environment variables pass کریں
+#    Use .env files in production or pass environment variables
+#
+# 2. SECRETS MANAGEMENT:
+#    Sensitive credentials کو Docker secrets یا external secret management
+#    میں store کریں
+#    Store sensitive credentials in Docker secrets or external secret management
+#
+# 3. VOLUMES:
+#    صرف database کے لیے volume mount ہے
+#    Only database has volume mount for data persistence
+#    Code volumes نہیں ہیں (security)
+#    No code volumes (security)
+#
+# 4. RESTART POLICY:
+#    تمام services کی restart policy 'always' ہے
+#    All services have restart policy 'always'
+#    Server reboot ہونے پر automatically start ہوں گی
+#    Will automatically start on server reboot
+#
+# 5. HEALTH CHECKS:
+#    تمام services کی health checks improved ہیں
+#    All services have improved health checks
+#    Deployment workflow ان کا استعمال کرتا ہے
+#    Deployment workflow uses these
+#
+# 6. SECURITY:
+#    - کوئی development dependencies نہیں
+#      No development dependencies
+#    - Non-root users containers میں
+#      Non-root users in containers
+#    - کوئی source code mounts نہیں
+#      No source code mounts
+#    - Minimal base images (Alpine)
+#      Minimal base images (Alpine)
+#
+# =============================================================================
+

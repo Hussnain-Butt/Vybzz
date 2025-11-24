@@ -1,0 +1,84 @@
+# =============================================================================
+# POST SERVICE - PRODUCTION DOCKERFILE
+# =============================================================================
+# یہ multi-stage Dockerfile Prisma ORM کے ساتھ optimize ہے
+# This multi-stage Dockerfile is optimized with Prisma ORM support
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# STAGE 1: DEPENDENCIES & BUILD
+# Dependencies install اور Prisma generate کرنا
+# ---------------------------------------------------------------------------
+FROM node:20-bookworm-slim AS builder
+
+WORKDIR /app
+
+# Build argument for database URL (Prisma generate کے لیے)
+# Build argument for database URL (for Prisma generate)
+ARG DATABASE_URL=postgresql://postgres:postgres@postgres:5432/vybzz?schema=posts
+ENV DATABASE_URL=${DATABASE_URL}
+
+# Package files اور Prisma schema copy کریں
+# Copy package files and Prisma schema
+COPY package*.json ./
+COPY prisma ./prisma
+
+# Dependencies install کریں (build کے لیے سب چاہیے)
+# Install all dependencies (needed for build)
+RUN npm ci
+
+# Prisma client generate کریں
+# Generate Prisma client
+RUN npx prisma generate
+
+# Application code copy کریں
+# Copy application code
+COPY . .
+
+# Production dependencies install کریں clean slate پر
+# Install production dependencies on clean slate
+RUN npm ci --omit=dev
+
+# ---------------------------------------------------------------------------
+# STAGE 2: PRODUCTION
+# Final production image بنانا
+# ---------------------------------------------------------------------------
+FROM node:20-bookworm-slim AS production
+
+# Production environment
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+# Curl install کریں health checks کے لیے
+# Install curl for health checks
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Builder stage سے سب کچھ copy کریں
+# Copy everything from builder stage
+COPY --from=builder /app ./
+
+# Non-root user بنائیں (security best practice)
+# Create non-root user (security best practice)
+RUN useradd -m nodeuser && \
+    chown -R nodeuser:nodeuser /app
+
+# Non-root user استعمال کریں
+# Use non-root user
+USER nodeuser
+
+# Port expose کریں
+EXPOSE 3003
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3003/health || exit 1
+
+# Application start کریں
+# Note: Migrations deployment کے وقت GitHub Actions سے run ہوں گی
+# Start application
+# Note: Migrations will be run from GitHub Actions during deployment
+CMD ["node", "index.js"]
+

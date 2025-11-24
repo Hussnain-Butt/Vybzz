@@ -1,0 +1,69 @@
+# =============================================================================
+# API GATEWAY - PRODUCTION DOCKERFILE
+# =============================================================================
+# یہ multi-stage Dockerfile production کے لیے optimize ہے
+# This multi-stage Dockerfile is optimized for production
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# STAGE 1: DEPENDENCIES
+# Dependencies install کرنا اور build prepare کرنا
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS dependencies
+
+# Working directory set کریں
+WORKDIR /app
+
+# Package files copy کریں
+# صرف یہ files copy کرنے سے Docker caching بہتر کام کرتی ہے
+COPY package*.json ./
+
+# Production dependencies install کریں (devDependencies نہیں)
+# Install only production dependencies (no devDependencies)
+RUN npm ci --omit=dev --ignore-scripts
+
+# ---------------------------------------------------------------------------
+# STAGE 2: PRODUCTION
+# Final production image بنانا
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS production
+
+# Production environment set کریں
+ENV NODE_ENV=production
+
+# Working directory
+WORKDIR /app
+
+# Curl install کریں health checks کے لیے
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Dependencies stage سے node_modules copy کریں
+# Copy node_modules from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Application code copy کریں
+# Copy application code
+COPY . .
+
+# Non-root user بنائیں اور استعمال کریں (security)
+# Create and use non-root user (security)
+RUN addgroup -S nodegrp && \
+    adduser -S nodeuser -G nodegrp && \
+    chown -R nodeuser:nodegrp /app
+
+# Non-root user پر switch کریں
+USER nodeuser
+
+# Port expose کریں
+EXPOSE 3000
+
+# Health check define کریں
+# Define health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Application start کریں
+# Start application
+CMD ["node", "index.js"]
+
