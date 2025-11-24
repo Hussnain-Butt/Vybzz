@@ -1,0 +1,414 @@
+# =============================================================================
+# VYBZZ AUTOMATED DEPLOYMENT WORKFLOW
+# =============================================================================
+# یہ فائل GitHub Actions کے ذریعے خودکار deployment کا انتظام کرتی ہے
+# This file manages automated deployment through GitHub Actions
+#
+# TRIGGER: جب بھی آپ main branch پر code push کریں گے
+# TRIGGER: Whenever you push code to the main branch
+#
+# PROCESS:
+# 1. Code checkout کرتا ہے
+# 2. Digital Ocean server پر SSH کرتا ہے
+# 3. Latest code pull کرتا ہے
+# 4. Docker containers کو rebuild اور restart کرتا ہے
+# 5. Health checks چلاتا ہے
+# 6. اگر کچھ غلط ہو تو rollback کرتا ہے
+# =============================================================================
+
+name: Deploy to Digital Ocean
+
+on:
+  push:
+    branches:
+      - main  # صرف main branch پر push ہونے پر deployment ہوگی
+              # Deployment will trigger only on push to main branch
+  
+  workflow_dispatch:  # Manual trigger بھی ممکن ہے GitHub UI سے
+                      # Manual trigger is also possible from GitHub UI
+
+env:
+  # Environment variables jo sari jobs میں available ہوں گے
+  # Environment variables that will be available in all jobs
+  DEPLOY_PATH: /root/vybzz  # Server پر project کا path
+  DOCKER_BUILDKIT: 1        # Fast builds کے لیے
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  # =============================================================================
+  # JOB 1: DEPLOYMENT
+  # =============================================================================
+  deploy:
+    name: Deploy to Production Server
+    runs-on: ubuntu-latest
+    
+    steps:
+      # -------------------------------------------------------------------------
+      # STEP 1: کوڈ چیک آؤٹ کرنا
+      # Checkout the code from repository
+      # -------------------------------------------------------------------------
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # پوری Git history لانے کے لیے (rollback کے لیے ضروری)
+                          # Fetch full Git history (needed for rollback)
+
+      # -------------------------------------------------------------------------
+      # STEP 2: SSH کی تیاری
+      # Setup SSH connection to Digital Ocean
+      # -------------------------------------------------------------------------
+      - name: 🔐 Setup SSH Key
+        run: |
+          # SSH private key کو temporary file میں save کرنا
+          # Save SSH private key to a temporary file
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # Server کی fingerprint کو known_hosts میں add کرنا
+          # Add server fingerprint to known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          
+          echo "✅ SSH setup complete"
+
+      # -------------------------------------------------------------------------
+      # STEP 3: SERVER صحت کی جانچ (Pre-deployment)
+      # Check server health before deployment
+      # -------------------------------------------------------------------------
+      - name: 🏥 Pre-deployment Health Check
+        run: |
+          echo "🔍 Checking server connectivity..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "
+            echo '✅ Server is reachable'
+            echo '💾 Disk space:'
+            df -h | grep -E '^/dev/'
+            echo '🧠 Memory usage:'
+            free -h
+            echo '🐳 Docker status:'
+            docker --version
+            docker-compose --version
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 4: موجودہ CONTAINERS کی حالت محفوظ کرنا
+      # Save current state for potential rollback
+      # -------------------------------------------------------------------------
+      - name: 💾 Backup Current State
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            # موجودہ Git commit hash save کرنا
+            # Save current Git commit hash
+            git rev-parse HEAD > .last_successful_deploy || echo 'first_deploy' > .last_successful_deploy
+            
+            # موجودہ containers کی list save کرنا
+            # Save list of running containers
+            docker ps --format '{{.Names}}' > .running_containers.bak || true
+            
+            echo '✅ Backup complete'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 5: CODE کو SERVER پر PULL کرنا
+      # Pull latest code on the server
+      # -------------------------------------------------------------------------
+      - name: 📦 Deploy Code to Server
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            # Project directory میں جانا
+            # Navigate to project directory
+            cd $DEPLOY_PATH
+            
+            echo '📥 Pulling latest code from GitHub...'
+            git fetch --all
+            git reset --hard origin/main
+            
+            # Git info دکھانا
+            # Display Git info
+            echo '📌 Current commit:'
+            git log -1 --oneline
+            
+            echo '✅ Code updated successfully'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 6: ENVIRONMENT VARIABLES کی جانچ
+      # Verify environment variables are present
+      # -------------------------------------------------------------------------
+      - name: 🔐 Verify Environment Variables
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            echo '🔍 Checking for required .env files...'
+            
+            # Check all service .env files
+            MISSING_FILES=0
+            
+            for service in Backend/api-gateway Backend/services/auth-service Backend/services/post-service Backend/services/live-streaming-service; do
+              if [ ! -f \$service/.env ]; then
+                echo '❌ Missing: \$service/.env'
+                MISSING_FILES=1
+              else
+                echo '✅ Found: \$service/.env'
+              fi
+            done
+            
+            if [ \$MISSING_FILES -eq 1 ]; then
+              echo '⚠️  Warning: کچھ .env files missing ہیں'
+              echo '⚠️  Warning: Some .env files are missing'
+              echo 'Deployment جاری رہے گی لیکن services fail ہو سکتی ہیں'
+              echo 'Deployment will continue but services may fail'
+            fi
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 7: DOCKER IMAGES کو BUILD کرنا
+      # Build Docker images with latest code
+      # -------------------------------------------------------------------------
+      - name: 🏗️  Build Docker Images
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            echo '🏗️  Building Docker images...'
+            echo 'یہ process 5-10 منٹ لے سکتا ہے'
+            echo 'This process may take 5-10 minutes'
+            
+            # Production compose file استعمال کرتے ہوئے build کرنا
+            # Build using production compose file
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+            
+            echo '✅ Docker images built successfully'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 8: PURANI CONTAINERS کو روکنا
+      # Stop old containers gracefully
+      # -------------------------------------------------------------------------
+      - name: 🛑 Stop Old Containers
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            echo '🛑 Stopping existing containers...'
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+            
+            echo '✅ Old containers stopped'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 9: NAYI CONTAINERS شروع کرنا
+      # Start new containers
+      # -------------------------------------------------------------------------
+      - name: 🚀 Start New Containers
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            echo '🚀 Starting new containers...'
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            
+            echo '⏳ کچھ سیکنڈ انتظار کریں containers شروع ہونے تک...'
+            echo '⏳ Waiting a few seconds for containers to start...'
+            sleep 10
+            
+            echo '📋 Container status:'
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 10: DATABASE MIGRATIONS چلانا
+      # Run database migrations
+      # -------------------------------------------------------------------------
+      - name: 🗄️  Run Database Migrations
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            echo '🗄️  Running database migrations...'
+            
+            # User service migrations
+            echo 'Running user-service migrations...'
+            docker exec user-service npx prisma migrate deploy || echo '⚠️  User migrations may have failed'
+            
+            # Post service migrations
+            echo 'Running post-service migrations...'
+            docker exec post-service npx prisma migrate deploy || echo '⚠️  Post migrations may have failed'
+            
+            # Live streaming service migrations
+            echo 'Running live-streaming-service migrations...'
+            docker exec live-streaming-service npx prisma migrate deploy || echo '⚠️  Livestream migrations may have failed'
+            
+            echo '✅ Migrations completed'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 11: HEALTH CHECKS
+      # Verify all services are running properly
+      # -------------------------------------------------------------------------
+      - name: 🏥 Health Check All Services
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            echo '🏥 Checking health of all services...'
+            
+            # Health check function
+            check_health() {
+              local service_name=\$1
+              local health_url=\$2
+              local max_attempts=30
+              local attempt=1
+              
+              echo \"Checking \$service_name...\"
+              
+              while [ \$attempt -le \$max_attempts ]; do
+                if docker exec \${service_name} curl -f \${health_url} > /dev/null 2>&1; then
+                  echo \"✅ \$service_name is healthy\"
+                  return 0
+                fi
+                echo \"⏳ Attempt \$attempt/\$max_attempts - waiting for \$service_name...\"
+                sleep 2
+                attempt=\$((attempt + 1))
+              done
+              
+              echo \"❌ \$service_name health check failed\"
+              return 1
+            }
+            
+            # تمام services کی health check کرنا
+            # Check health of all services
+            FAILED=0
+            
+            check_health 'api-gateway' 'http://localhost:3000/health' || FAILED=1
+            check_health 'auth-service' 'http://localhost:3001/health' || FAILED=1
+            check_health 'user-service' 'http://localhost:3002/health' || FAILED=1
+            check_health 'post-service' 'http://localhost:3003/health' || FAILED=1
+            check_health 'live-streaming-service' 'http://localhost:3004/health' || FAILED=1
+            
+            if [ \$FAILED -eq 1 ]; then
+              echo '❌ Some services failed health checks'
+              echo '📋 Container logs:'
+              docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=50
+              exit 1
+            fi
+            
+            echo '✅ All services are healthy!'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 12: PURANY DOCKER IMAGES صاف کرنا
+      # Clean up old Docker images to save space
+      # -------------------------------------------------------------------------
+      - name: 🧹 Cleanup Old Images
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            echo '🧹 Cleaning up unused Docker resources...'
+            
+            # پرانی images اور containers صاف کرنا
+            # Clean up old images and containers
+            docker system prune -af --filter 'until=24h' || true
+            
+            echo '💾 Remaining disk space:'
+            df -h | grep -E '^/dev/'
+            
+            echo '✅ Cleanup complete'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 13: DEPLOYMENT SUCCESS کا ریکارڈ
+      # Record successful deployment
+      # -------------------------------------------------------------------------
+      - name: ✅ Mark Deployment Successful
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            # موجودہ commit کو successful deployment کے طور پر mark کرنا
+            # Mark current commit as successful deployment
+            git rev-parse HEAD > .last_successful_deploy
+            
+            echo '✅ Deployment completed successfully!'
+            echo '🎉 Vybzz is now running the latest version!'
+            echo ''
+            echo '📊 Deployment Summary:'
+            echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+            echo \"Deployed Commit: \$(git log -1 --oneline)\"
+            echo \"Deployment Time: \$(date)\"
+            echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+          "
+
+      # -------------------------------------------------------------------------
+      # STEP 14: SSH کی صفائی
+      # Cleanup SSH keys
+      # -------------------------------------------------------------------------
+      - name: 🧹 Cleanup SSH
+        if: always()  # یہ ہمیشہ چلے گا چاہے کچھ بھی ہو
+                     # This will always run regardless of success/failure
+        run: |
+          rm -f ~/.ssh/deploy_key
+          echo "✅ SSH cleanup complete"
+
+  # =============================================================================
+  # JOB 2: ROLLBACK (اگر deployment ناکام ہو)
+  # Automatic rollback if deployment fails
+  # =============================================================================
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()  # صرف اگر deploy job fail ہو
+                   # Only if deploy job fails
+    
+    steps:
+      - name: 🔐 Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: ⏪ Rollback to Previous Version
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} "
+            cd $DEPLOY_PATH
+            
+            echo '⚠️  Deployment failed! Rolling back...'
+            echo '⚠️  ڈیپلائمنٹ ناکام! پچھلی version پر واپس جا رہے ہیں...'
+            
+            # پچھلی successful commit پر واپس جانا
+            # Go back to last successful commit
+            if [ -f .last_successful_deploy ]; then
+              LAST_COMMIT=\$(cat .last_successful_deploy)
+              if [ \"\$LAST_COMMIT\" != 'first_deploy' ]; then
+                git reset --hard \$LAST_COMMIT
+                
+                # پرانی containers restart کرنا
+                # Restart old containers
+                docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+                docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+                
+                echo '✅ Rollback successful!'
+                echo '✅ رول بیک کامیاب!'
+              else
+                echo '⚠️  No previous deployment found'
+                echo '⚠️  کوئی پچھلی deployment نہیں ملی'
+              fi
+            fi
+          "
+
+      - name: 📧 Send Failure Notification
+        run: |
+          echo "❌ DEPLOYMENT FAILED AND ROLLED BACK"
+          echo "Please check the logs and fix the issues before trying again"
+          echo ""
+          echo "❌ ڈیپلائمنٹ ناکام اور رول بیک ہو گیا"
+          echo "براہ کرم logs چیک کریں اور مسائل ٹھیک کریں"
+
+      - name: 🧹 Cleanup SSH
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+

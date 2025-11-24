@@ -1,10 +1,8 @@
-// user-service/controllers/user.controller.js
-
 const { Webhook } = require('svix')
 const { prisma } = require('../db/prisma')
 const { uploadToCloudinary } = require('../utils/cloudinary')
-// ✅ FIX: Clerk SDK ko sahi tareeqay se import kiya gaya hai
-const clerk = require('@clerk/clerk-sdk-node')
+// ✅ FIX: Clerk SDK is correctly imported
+const { clerkClient } = require('@clerk/clerk-sdk-node')
 
 const WEBHOOK_SECRET =
   process.env.CLERK_WEBHOOK_SIGNING_SECRET || 'whsec_xeTb2X35/E+kbYPVLIU5ut6x8ND3bzzb'
@@ -24,11 +22,13 @@ if (DEBUG_BYPASS) {
   console.warn('**************************************************')
 }
 
-// Helper functions (koi badlav nahi)
+// Helper functions - handles both webhook (snake_case) and API (camelCase) formats
 const getPrimaryEmail = (data) => {
-  const list = data?.email_addresses || []
-  const e = list.find((x) => x.id === data?.primary_email_address_id) || list[0]
-  return e?.email_address || null
+  // Handle both webhook format (email_addresses) and API format (emailAddresses)
+  const list = data?.email_addresses || data?.emailAddresses || []
+  const primaryId = data?.primary_email_address_id || data?.primaryEmailAddressId
+  const e = list.find((x) => x.id === primaryId) || list[0]
+  return e?.email_address || e?.emailAddress || null
 }
 const fullName = (f, l) => [f, l].filter(Boolean).join(' ').trim() || null
 const createUrlSlug = (name) => {
@@ -40,7 +40,7 @@ const createUrlSlug = (name) => {
     .slice(0, 50)
 }
 
-// ✅ FIX: Webhook handler ab email aur user deletion dono ko theek se handle karta hai
+// ✅ FIX: Webhook handler now correctly handles both email and user deletion
 const handleClerkWebhook = async (req, res) => {
   try {
     const payloadBuffer = req.body
@@ -65,7 +65,7 @@ const handleClerkWebhook = async (req, res) => {
         imageUrl: data.image_url || null,
       }
 
-      // Upsert logic (agar user clerkId se mil jaye to update karo, warna naya banao)
+      // Upsert logic (if user found by clerkId, update, otherwise create new)
       await prisma.user.upsert({
         where: { clerkId: data.id },
         update: userData,
@@ -74,18 +74,18 @@ const handleClerkWebhook = async (req, res) => {
     } else if (type === 'user.deleted') {
       const clerkId = data?.id
       if (clerkId) {
-        // User delete karne se pehle, usay dhoondo
+        // Before deleting the user, find them
         const userToDelete = await prisma.user.findUnique({
           where: { clerkId: clerkId },
         })
 
         if (userToDelete) {
-          // Agar user mil jaye, to pehle uska CreatorProfile delete karo
+          // If user is found, first delete their CreatorProfile
           await prisma.creatorProfile.deleteMany({
             where: { userId: userToDelete.id },
           })
 
-          // Ab User ko delete karo
+          // Now delete the User
           await prisma.user.delete({
             where: { id: userToDelete.id },
           })
@@ -120,16 +120,23 @@ const getMe = async (req, res) => {
     }
 
     console.log(`[getMe] User NOT in DB. Fetching from Clerk API for clerkId: ${clerkId}`)
-    const clerkUser = await clerk.users.getUser(clerkId)
+    const clerkUser = await clerkClient.users.getUser(clerkId)
+    console.log('[getMe] Clerk user data:', JSON.stringify(clerkUser, null, 2))
+
+    const email = getPrimaryEmail(clerkUser)
+    if (!email) {
+      console.error(`[getMe] ERROR: No email found for Clerk user ${clerkId}`)
+      return res.status(400).json({ error: 'User email not found in Clerk' })
+    }
 
     const newUserPayload = {
       clerkId: clerkUser.id,
-      email: getPrimaryEmail(clerkUser),
+      email: email,
       name: fullName(clerkUser.firstName, clerkUser.lastName),
       imageUrl: clerkUser.imageUrl,
     }
 
-    // Dobara check karein, ho sakta hai webhook ne user abhi abhi banaya ho
+    // Double-check, maybe the webhook just created the user
     const existingUserByEmail = await prisma.user.findUnique({
       where: { email: newUserPayload.email },
     })
@@ -137,7 +144,7 @@ const getMe = async (req, res) => {
     if (existingUserByEmail) {
       user = await prisma.user.update({
         where: { email: newUserPayload.email },
-        data: { clerkId: newUserPayload.clerkId }, // Sirf clerkId update karein
+        data: { clerkId: newUserPayload.clerkId }, // Only update clerkId
         include: { creatorProfile: true },
       })
     } else {
@@ -155,7 +162,7 @@ const getMe = async (req, res) => {
   }
 }
 
-// --- Baaki Controller Functions (Inmein koi badlav nahi) ---
+// --- Other Controller Functions (No changes in these) ---
 const listUsers = async (_req, res) => {
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } })
   res.json(users)
@@ -297,7 +304,7 @@ const updateCreatorProfileDetails = async (req, res) => {
     })
   } catch (error) {
     if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Creator profile not found.' })
+      return res.status(404).json({ error: 'Creator profile not found for this user.' })
     }
     res.status(500).json({ error: 'Something went wrong.' })
   }

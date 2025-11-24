@@ -11,7 +11,14 @@ function spawnFfmpeg(rtmpUrl, streamKey) {
     // --- Input Options ---
     '-hide_banner',
     '-loglevel',
-    'debug', // MAXIMUM LOGGING! This will show everything.
+    'debug', // Keep debug logs for now to catch any issues
+
+    // *** THE FIX: Add flags to help FFmpeg analyze the initial stream data ***
+    '-analyzeduration',
+    '1M', // Analyze up to 1MB of data to determine format
+    '-probesize',
+    '1M', // Probe up to 1MB of data
+
     '-f',
     'webm',
     '-i',
@@ -52,7 +59,6 @@ function spawnFfmpeg(rtmpUrl, streamKey) {
   console.log(`[FFMPEG] Spawning for stream ${streamKey} with args: ffmpeg ${args.join(' ')}`)
   const ffmpeg = spawn('ffmpeg', args)
 
-  // *** CRITICAL FOR DEBUGGING ***
   // Listen to FFmpeg's output streams to catch any errors or info
   ffmpeg.stderr.on('data', (data) => {
     console.error(`[FFMPEG STDERR - ${streamKey}]: ${data.toString()}`)
@@ -71,7 +77,9 @@ function spawnFfmpeg(rtmpUrl, streamKey) {
   })
 
   ffmpeg.stdin.on('error', (err) => {
-    console.error(`[FFMPEG STDIN Error - ${streamKey}]:`, err.message)
+    // This error often happens when the WebSocket closes and we try to write to a closed pipe.
+    // It's usually not critical but good to log.
+    console.warn(`[FFMPEG STDIN Error - ${streamKey}]:`, err.message)
   })
 
   return ffmpeg
@@ -96,7 +104,6 @@ module.exports = function setupStreamingRoutes(wss) {
     streams[streamKey] = ffmpeg
 
     ws.on('message', (message) => {
-      // Forward the binary message from the browser to FFmpeg's standard input
       if (ffmpeg.stdin && ffmpeg.stdin.writable) {
         ffmpeg.stdin.write(message)
       } else {
@@ -105,7 +112,6 @@ module.exports = function setupStreamingRoutes(wss) {
     })
 
     ws.on('close', (code, reason) => {
-      // The reason buffer needs to be converted to a string to be readable
       const reasonString = reason ? reason.toString() : 'No reason given'
       console.log(
         `[WS] Client disconnected for stream key: ${streamKey}. Code: ${code}, Reason: ${reasonString}`,
@@ -113,7 +119,7 @@ module.exports = function setupStreamingRoutes(wss) {
 
       if (streams[streamKey]) {
         console.log(`[FFMPEG] Terminating process for stream key: ${streamKey}`)
-        streams[streamKey].kill('SIGINT') // Gracefully kill FFmpeg
+        streams[streamKey].kill('SIGINT')
         delete streams[streamKey]
       }
     })

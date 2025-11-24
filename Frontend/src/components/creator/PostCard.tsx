@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 // CHANGE 1: Import the Link component from react-router-dom
 import { Link } from 'react-router-dom'
-import { MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, Eye, Play } from 'lucide-react'
 
 type MediaAsset = {
   url: string
@@ -33,6 +33,10 @@ const PostCard = ({ post }: { post: Post }) => {
     return post.mediaAssets?.find((asset) => asset.type === 'IMAGE')?.url
   }, [post.mediaAssets])
 
+  const hasLivestream = useMemo(() => {
+    return post.mediaAssets?.some((asset) => asset.type === 'LIVESTREAM')
+  }, [post.mediaAssets])
+
   const statusBadge = useMemo(() => {
     switch (post.status) {
       case 'PUBLISHED':
@@ -58,16 +62,29 @@ const PostCard = ({ post }: { post: Post }) => {
     }
   }, [post.status])
 
-  const formattedDate = new Date(post.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  const formatTimestamp = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (diffInSeconds < 60) return 'just now'
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    })
+  }
+
+  const formattedDate = formatTimestamp(post.createdAt)
 
   return (
     <article className="bg-[rgb(var(--color-surface-1))] rounded-2xl border border-[rgb(var(--color-surface-2))] overflow-hidden flex flex-col transition-all duration-300 hover:border-[rgb(var(--color-primary-cyan))] hover:shadow-2xl hover:shadow-cyan-500/10 group">
       {/* Making the image a link to the post view page */}
-      <Link to={`/dashboard/library/posts/${post.id}`}>
+      <Link to={`/dashboard/library/posts/${post.id}`} className="relative">
         {thumbnailUrl ? (
           <img
             src={thumbnailUrl}
@@ -76,6 +93,12 @@ const PostCard = ({ post }: { post: Post }) => {
           />
         ) : (
           <div className="h-40 w-full bg-[rgb(var(--color-surface-2))]"></div>
+        )}
+        {hasLivestream && (
+          <div className="absolute top-2 left-2 bg-red-600/90 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
+            <Play size={12} className="text-white fill-white" />
+            <span className="text-white text-xs font-bold">STREAM</span>
+          </div>
         )}
       </Link>
 

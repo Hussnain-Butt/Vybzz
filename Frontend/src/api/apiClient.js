@@ -61,7 +61,8 @@ export const getMyPosts = async () => {
 export const getPostById = async (postId) => {
   console.log(`[apiClient] getPostById function called for ID: ${postId}`)
   const response = await apiClient.get(`/posts/${postId}`)
-  console.log('[apiClient] getPostById response received.')
+  console.log('[apiClient] getPostById response received:', JSON.stringify(response.data, null, 2))
+  console.log('[apiClient] Media Assets:', response.data.mediaAssets)
   return response.data
 }
 

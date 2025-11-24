@@ -447,31 +447,14 @@ const DashboardHome: React.FC = () => {
   }
 
   // =======================================================
-  // === GO LIVE FUNCTION AB MUKAMMAL LOGIC KE SATH HAI ===
+  // === GO LIVE FUNCTION - SEEDHA MODAL OPEN KARTA HAI ===
   // =======================================================
-  const handleGoLive = async () => {
+  const handleGoLive = () => {
     if (!user) return // Agar user data load nahi hua to kuch na karein
-
-    setIsCreatingStream(true)
-    const goLiveToast = toast.loading('Preparing your live stream...')
-
-    try {
-      const streamTitle = `${user.name || 'My'}'s Live Stream`
-      const response = await createLiveStream({ title: streamTitle })
-
-      if (response && response.streamKey) {
-        setStreamDetails({ streamKey: response.streamKey })
-        setIsGoLiveModalOpen(true) // Modal ko open karein
-        toast.success('Your stream is ready!', { id: goLiveToast })
-      } else {
-        throw new Error('Stream key not found in API response.')
-      }
-    } catch (error) {
-      console.error('Failed to create live stream:', error)
-      toast.error('Could not start live stream. Please try again.', { id: goLiveToast })
-    } finally {
-      setIsCreatingStream(false)
-    }
+    
+    // Stream create karne ki zaroorat nahi, seedha modal open kar do
+    // Stream modal ke andar create hogi jab user "Go Live" button click karega
+    setIsGoLiveModalOpen(true)
   }
 
   // =======================================================
@@ -836,8 +819,8 @@ const DashboardHome: React.FC = () => {
       {/* ========================================================== */}
       {/* === NAYA GO LIVE MODAL YAHAN RENDER KIYA JAYEGA (UPDATED) === */}
       {/* ========================================================== */}
-      {isGoLiveModalOpen && streamDetails.streamKey && (
-        <GoLiveModal streamKey={streamDetails.streamKey} onClose={handleCloseGoLiveModal} />
+      {isGoLiveModalOpen && (
+        <GoLiveModal streamKey={null} onClose={handleCloseGoLiveModal} />
       )}
     </div>
   )

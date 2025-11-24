@@ -18,6 +18,12 @@ const PORT = process.env.PORT || 3004
 
 // Middlewares
 app.use(cors())
+
+// ✅ FIX: Parse raw body for Mux webhooks BEFORE express.json()
+// This ensures webhook signature verification works correctly
+app.use('/webhooks/mux', express.raw({ type: 'application/json' }))
+
+// Parse JSON for all other routes
 app.use(express.json())
 
 // Health Check Endpoint

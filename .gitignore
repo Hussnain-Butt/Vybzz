@@ -1,0 +1,111 @@
+# =============================================================================
+# VYBZZ .gitignore
+# =============================================================================
+
+# Environment Variables (NEVER commit these!)
+# ماحولیاتی متغیرات (یہ کبھی commit نہ کریں!)
+.env
+.env.local
+.env.production
+.env.*.local
+**/.env
+**/.env.local
+**/.env.production
+
+# But allow .env.template and .env.example files
+!.env.template
+!.env.example
+!**/.env.template
+!**/.env.example
+
+# Node Modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# Docker
+*.dockerignore
+docker-compose.override.local.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups
+*.backup
+*.bak
+*.old
+*.sql.backup
+.last_successful_deploy
+.running_containers.bak
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage and test files
+coverage/
+.nyc_output/
+*.test.js.snap
+
+# Sensitive files
+private_keys/
+*.pem
+*.key
+*.cert
+id_rsa*
+!id_rsa*.pub
+
+# Package manager lock files (optional - uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Environment-specific
+.env.development
+.env.staging
+.env.test
+
+# Prisma
+**/prisma/migrations/**/migration.sql.backup
+
+# Cloudinary uploads cache
+.cloudinary/
+
+# Misc
+.cache/
+.parcel-cache/
+

@@ -22,7 +22,8 @@ const protect = [
   clerkMiddleware(),
   requireAuth(),
   (req, res, next) => {
-    const userId = req.auth?.userId
+    // ✅ FIX: Changed req.auth to req.auth() to resolve deprecation warning.
+    const userId = req.auth()?.userId
     if (userId) {
       req.headers['x-user-id'] = userId
       return next()
@@ -56,7 +57,13 @@ const defaultProxyOptions = {
 // -------- Public Routes --------
 app.use('/auth', createProxyMiddleware({ ...defaultProxyOptions, target: AUTH_URL }))
 app.use('/webhooks/clerk', createProxyMiddleware({ ...defaultProxyOptions, target: USER_URL }))
-app.use('/webhooks/mux', createProxyMiddleware({ ...defaultProxyOptions, target: LIVE_STREAM_URL }))
+// ✅ FIX: Express strips '/webhooks/mux', so we rewrite '/' back to '/webhooks/mux'
+app.use('/webhooks/mux', createProxyMiddleware({ 
+  ...defaultProxyOptions, 
+  target: LIVE_STREAM_URL,
+  pathRewrite: { '^/': '/webhooks/mux' }, // Rewrite / to /webhooks/mux
+  logLevel: 'debug'
+}))
 
 // -------- Protected Routes --------
 app.use('/users', protect, createProxyMiddleware({ ...defaultProxyOptions, target: USER_URL }))

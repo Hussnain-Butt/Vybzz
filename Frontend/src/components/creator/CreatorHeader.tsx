@@ -69,38 +69,12 @@ export const CreatorHeader: React.FC<CreatorHeaderProps> = ({ user, onProfileUpd
     bannerInputRef.current?.click()
   }
 
-  // --- GO LIVE FUNCTIONALITY (Updated for Debugging) ---
-  const handleGoLive = async () => {
-    alert('Go Live function CALL HUA!') // <--- YEH LINE ADD KAREIN
-    console.log('[DEBUG] "Go Live" button clicked.') // <-- LOG 1
-
-    setIsCreatingStream(true)
-    const goLiveToast = toast.loading('Preparing your live stream...')
-
-    try {
-      console.log('[DEBUG] Calling createLiveStream API function.') // <-- LOG 2
-
-      // Backend ko request bhej kar naya stream create karein
-      const response = await createLiveStream({ title: `${user.name}'s Live Stream` })
-
-      console.log('[DEBUG] API Response Received:', response) // <-- LOG 3
-
-      if (response && response.streamKey) {
-        setStreamDetails({ streamKey: response.streamKey })
-        setIsGoLiveModalOpen(true) // Modal ko open karein
-        toast.success('Your stream is ready!', { id: goLiveToast })
-      } else {
-        // YEH BOHAT ZAROORI HAI
-        console.error('[DEBUG] ERROR: Stream key not found in API response!', response)
-        throw new Error('Stream key not found in API response.')
-      }
-    } catch (error) {
-      // YEH BHI BOHAT ZAROORI HAI
-      console.error('[DEBUG] Failed to create live stream in CATCH block:', error)
-      toast.error('Could not start live stream. Please try again.', { id: goLiveToast })
-    } finally {
-      setIsCreatingStream(false)
-    }
+  // --- GO LIVE FUNCTIONALITY - SEEDHA MODAL OPEN KARTA HAI ---
+  const handleGoLive = () => {
+    console.log('[DEBUG] "Go Live" button clicked - Opening modal')
+    // Stream create karne ki zaroorat nahi, seedha modal open kar do
+    // Stream modal ke andar create hogi jab user "Go Live" button click karega
+    setIsGoLiveModalOpen(true)
   }
 
   const profile = user.creatorProfile
@@ -210,9 +184,9 @@ export const CreatorHeader: React.FC<CreatorHeaderProps> = ({ user, onProfileUpd
       </header>
 
       {/* Go Live Modal yahan conditionally render hoga */}
-      {isGoLiveModalOpen && streamDetails.streamKey && (
+      {isGoLiveModalOpen && (
         <GoLiveModal
-          streamKey={streamDetails.streamKey}
+          streamKey={null}
           onClose={() => setIsGoLiveModalOpen(false)}
         />
       )}

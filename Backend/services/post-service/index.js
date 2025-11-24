@@ -20,19 +20,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
 // =================================================================
-// === YEH SABSE ZAROORI CHANGE HAI ===
+// === IMPORTANT: Internal routes ko PEHLE register karein ===
+// =================================================================
+// Internal routes (without auth) should be registered BEFORE authenticated routes
+// to prevent the '/' catch-all from intercepting them
+app.use('/internal', internalRoutes)
+
+// =================================================================
+// === AUTHENTICATED PUBLIC ROUTES ===
 // =================================================================
 // API Gateway pehle se hi `/posts` ke requests ko is service par bhej raha hai.
 // Isliye, is service ko dobara `/posts` prefix lagane ki zaroorat nahi hai.
 // Hum yahan root path (`/`) par routes ko mount karenge.
-// Pehle: app.use('/posts', postRoutes)
-// Ab: app.use('/', postRoutes)
 app.use('/', postRoutes)
-
-// ----------------------------------------------------------------
-// YAHAN SE UPDATE HUA HAI - DATABASE CONNECTION LOGIC
-// ----------------------------------------------------------------
-app.use('/internal', internalRoutes) // <-- Naye internal routes yahan register karein
 
 // Server ko start karne wala function
 const startServer = async () => {

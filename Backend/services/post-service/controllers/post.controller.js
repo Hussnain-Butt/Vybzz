@@ -197,6 +197,11 @@ const getPostById = async (req, res) => {
     if (!post) {
       return res.status(404).json({ error: "Post not found or you don't have access." })
     }
+
+    // Debug logging
+    console.log('[Post Service] Fetching post:', id)
+    console.log('[Post Service] Media assets:', JSON.stringify(post.mediaAssets, null, 2))
+
     res.status(200).json(post)
   } catch (error) {
     console.error('Error fetching post by ID:', error)
@@ -220,46 +225,83 @@ const uploadMedia = async (req, res) => {
     res.status(500).json({ error: 'Failed to upload the file.' })
   }
 }
-
 const createPostFromStream = async (req, res) => {
-  // Is route par auth middleware nahi hai, isliye creatorId body se le rahe hain
-  const { creatorId, title, description, muxPlaybackId, muxAssetId } = req.body
+  // LOGS ADDED HERE
+  console.log('\n--- [Post Service] Internal VOD Request Received ---')
+  console.log('Timestamp:', new Date().toISOString())
+  console.log('Payload:', JSON.stringify(req.body, null, 2))
+
+  const { creatorId, title, description, tags, thumbnailUrl, muxPlaybackId, muxAssetId } = req.body
 
   if (!creatorId || !title || !muxPlaybackId) {
-    return res.status(400).json({ error: 'Missing required fields for VOD post creation.' })
+    console.error('[Post Service] ❌ Missing required fields')
+    return res.status(400).json({ error: 'Missing required fields' })
   }
 
   try {
-    const newPost = await prisma.post.create({
-      data: {
-        title,
-        content: description || '', // Content mein description daal dein
-        creatorId: creatorId,
-        status: 'PUBLISHED', // VOD foran publish hojayega
-        accessLevel: 'FREE', // Aap isko 'PAID' bhi kar sakte hain agar chahein
-        publishedAt: new Date(),
-        mediaAssets: {
-          create: [
-            {
-              type: 'LIVESTREAM', // Ya 'VIDEO', schema ke mutabiq
-              url: `https://stream.mux.com/${muxPlaybackId}.m3u8`, // HLS URL
-              muxPlaybackId: muxPlaybackId,
-              muxAssetId: muxAssetId,
-            },
-          ],
+    const newPost = await prisma.$transaction(async (tx) => {
+      // Tags handling
+      let createdOrFoundTags = []
+      if (tags && Array.isArray(tags) && tags.length > 0) {
+        const tagOperations = tags.map((tagName) =>
+          tx.tag.upsert({
+            where: { name: tagName.toLowerCase() },
+            update: {},
+            create: { name: tagName.toLowerCase() },
+          }),
+        )
+        createdOrFoundTags = await Promise.all(tagOperations)
+      }
+
+      // HLS URL
+      const hlsUrl = `https://stream.mux.com/${muxPlaybackId}.m3u8`
+
+      // Media Asset
+      const mediaAssets = [
+        {
+          type: 'LIVESTREAM', // Using LIVESTREAM type for VODs
+          url: hlsUrl,
+          muxPlaybackId: muxPlaybackId,
+          muxAssetId: muxAssetId,
         },
-      },
-      include: {
-        mediaAssets: true,
-      },
+      ]
+
+      if (thumbnailUrl) {
+        mediaAssets.push({ type: 'IMAGE', url: thumbnailUrl })
+      }
+
+      // Create Post
+      const post = await tx.post.create({
+        data: {
+          title,
+          content: description || '',
+          creatorId: creatorId,
+          status: 'PUBLISHED',
+          accessLevel: 'FREE',
+          isDrop: false,
+          allowComments: true,
+          publishedAt: new Date(),
+          mediaAssets: {
+            create: mediaAssets,
+          },
+          tags: {
+            create: createdOrFoundTags.map((tag) => ({
+              tag: { connect: { id: tag.id } },
+            })),
+          },
+        },
+        include: {
+          mediaAssets: true,
+          tags: { include: { tag: true } },
+        },
+      })
+      return post
     })
 
-    console.log(
-      `[Post Service] VOD Post created successfully for user ${creatorId}. Post ID: ${newPost.id}`,
-    )
+    console.log(`[Post Service] ✅ VOD Post Created Successfully: ID ${newPost.id}`)
     res.status(201).json(newPost)
   } catch (error) {
-    console.error('Error creating post from stream:', error)
+    console.error('[Post Service] ❌ Transaction Failed:', error)
     res.status(500).json({ error: 'Could not create post from stream.' })
   }
 }
