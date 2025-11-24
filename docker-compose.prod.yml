@@ -51,32 +51,31 @@ services:
       start_period: 40s
 
   # ===========================================================================
-  # POSTGRESQL DATABASE (Production)
+  # POSTGRESQL DATABASE (Production) - DISABLED
   # ===========================================================================
-  postgres:
-    # Production میں restart policy always ہونی چاہیے
-    # Restart policy should be always in production
-    restart: always
-    
-    # Production credentials (environment variables سے آئیں گے)
-    # Production credentials (will come from environment variables)
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-vybzz}
-    
-    # Volume mount (data persistence)
-    # Production میں named volume استعمال کریں
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    
-    # Health check improvements
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-vybzz} || exit 1']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+  # Production میں Digital Ocean Managed Database استعمال کر رہے ہیں
+  # Using Digital Ocean Managed Database in production
+  # 
+  # ⚠️ IMPORTANT: postgres container production میں disabled ہے
+  # postgres container is disabled in production
+  # 
+  # External managed database connection strings .env.production میں ہیں
+  # External managed database connection strings are in .env.production
+  #
+  # postgres:
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  #     POSTGRES_DB: ${POSTGRES_DB:-vybzz}
+  #   volumes:
+  #     - pg_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-vybzz} || exit 1']
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
 
   # ===========================================================================
   # API GATEWAY (Production)
@@ -131,6 +130,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3001'
+      # Environment variables from .env.production will be loaded
+    
+    # ⚠️ Production میں postgres container dependency removed
+    # Removed postgres container dependency in production (using managed DB)
+    # depends_on: removed because using external managed database
     
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
@@ -149,7 +153,8 @@ services:
       dockerfile: Dockerfile  # Already production-ready with Prisma
       args:
         NODE_ENV: production
-        DATABASE_URL: ${USER_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=users}
+        # Using managed database URL from environment
+        DATABASE_URL: ${USER_SERVICE_DATABASE_URL}
     
     restart: always
     volumes: []
@@ -157,7 +162,14 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3002'
-      DATABASE_URL: ${USER_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=users}
+      # Digital Ocean Managed PostgreSQL Database URL (from .env.production)
+      DATABASE_URL: ${USER_SERVICE_DATABASE_URL}
+      CLERK_WEBHOOK_SIGNING_SECRET: ${CLERK_WEBHOOK_SIGNING_SECRET}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     
     # DNS settings (IPv6 disable - stability)
     dns:
@@ -166,6 +178,9 @@ services:
     
     sysctls:
       net.ipv6.conf.all.disable_ipv6: 1
+    
+    # ⚠️ Production میں postgres container dependency removed
+    # Removed postgres container dependency (using external managed database)
     
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
@@ -183,7 +198,8 @@ services:
       dockerfile: Dockerfile.prod  # Will create optimized version
       args:
         NODE_ENV: production
-        DATABASE_URL: ${POST_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=posts}
+        # Using managed database URL from environment
+        DATABASE_URL: ${POST_SERVICE_DATABASE_URL}
     
     restart: always
     volumes: []
@@ -191,7 +207,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3003'
-      DATABASE_URL: ${POST_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=posts}
+      # Digital Ocean Managed PostgreSQL Database URL (from .env.production)
+      DATABASE_URL: ${POST_SERVICE_DATABASE_URL}
     
     dns:
       - 8.8.8.8
@@ -199,6 +216,9 @@ services:
     
     sysctls:
       net.ipv6.conf.all.disable_ipv6: 1
+    
+    # ⚠️ Production میں postgres container dependency removed
+    # Removed postgres container dependency (using external managed database)
     
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3003/health']
@@ -216,7 +236,8 @@ services:
       dockerfile: Dockerfile  # Already has FFMPEG installed
       args:
         NODE_ENV: production
-        DATABASE_URL: ${LIVESTREAM_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=livestreams}
+        # Using managed database URL from environment
+        DATABASE_URL: ${LIVESTREAM_SERVICE_DATABASE_URL}
     
     restart: always
     volumes: []
@@ -224,7 +245,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3004'
-      DATABASE_URL: ${LIVESTREAM_SERVICE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/vybzz?schema=livestreams}
+      # Digital Ocean Managed PostgreSQL Database URL (from .env.production)
+      DATABASE_URL: ${LIVESTREAM_SERVICE_DATABASE_URL}
+    
+    # ⚠️ Production میں postgres container dependency removed
+    # Removed postgres container dependency (using external managed database)
     
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3004/health']
@@ -236,12 +261,15 @@ services:
 # =============================================================================
 # VOLUMES (Production)
 # =============================================================================
-volumes:
-  # PostgreSQL data persistence
-  # یہ named volume database کا data store کرے گا
-  # This named volume will store database data
-  pg_data:
-    driver: local
+# ⚠️ Production میں Digital Ocean Managed Database استعمال کر رہے ہیں
+# Using Digital Ocean Managed Database in production
+# 
+# Local postgres volume کی ضرورت نہیں ہے
+# Local postgres volume is not needed
+#
+# volumes:
+#   pg_data:
+#     driver: local
 
 # =============================================================================
 # NETWORKS (Optional - اگر specific network config چاہیے)
@@ -254,34 +282,45 @@ volumes:
 # NOTES / نوٹس
 # =============================================================================
 #
-# 1. ENVIRONMENT VARIABLES:
-#    Production میں .env files استعمال کریں یا environment variables pass کریں
-#    Use .env files in production or pass environment variables
+# 1. MANAGED DATABASE:
+#    ⚠️ Production میں Digital Ocean Managed PostgreSQL استعمال کر رہے ہیں
+#    Using Digital Ocean Managed PostgreSQL in production
+#    Connection strings .env.production میں ہیں
+#    Connection strings are in .env.production
 #
-# 2. SECRETS MANAGEMENT:
-#    Sensitive credentials کو Docker secrets یا external secret management
-#    میں store کریں
-#    Store sensitive credentials in Docker secrets or external secret management
+# 2. ENVIRONMENT VARIABLES:
+#    Production میں .env.production file استعمال کریں
+#    Use .env.production file in production
+#    سب environment variables وہاں define ہیں
+#    All environment variables are defined there
 #
-# 3. VOLUMES:
-#    صرف database کے لیے volume mount ہے
-#    Only database has volume mount for data persistence
+# 3. SECRETS MANAGEMENT:
+#    Sensitive credentials .env.production میں ہیں
+#    Sensitive credentials are in .env.production
+#    Server پر secure storage میں رکھیں (chmod 600)
+#    Keep in secure storage on server (chmod 600)
+#
+# 4. VOLUMES:
+#    Production میں کوئی volumes نہیں ہیں
+#    No volumes in production
+#    Database Digital Ocean managed service ہے
+#    Database is Digital Ocean managed service
 #    Code volumes نہیں ہیں (security)
 #    No code volumes (security)
 #
-# 4. RESTART POLICY:
+# 5. RESTART POLICY:
 #    تمام services کی restart policy 'always' ہے
 #    All services have restart policy 'always'
 #    Server reboot ہونے پر automatically start ہوں گی
 #    Will automatically start on server reboot
 #
-# 5. HEALTH CHECKS:
+# 6. HEALTH CHECKS:
 #    تمام services کی health checks improved ہیں
 #    All services have improved health checks
 #    Deployment workflow ان کا استعمال کرتا ہے
 #    Deployment workflow uses these
 #
-# 6. SECURITY:
+# 7. SECURITY:
 #    - کوئی development dependencies نہیں
 #      No development dependencies
 #    - Non-root users containers میں
@@ -290,6 +329,14 @@ volumes:
 #      No source code mounts
 #    - Minimal base images (Alpine)
 #      Minimal base images (Alpine)
+#    - SSL enabled for database connections
+#      Database connections کے لیے SSL enabled
+#
+# 8. DEPLOYMENT COMMAND:
+#    Server پر یہ command چلائیں:
+#    Run this command on server:
+#    
+#    docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
 #
 # =============================================================================
 
