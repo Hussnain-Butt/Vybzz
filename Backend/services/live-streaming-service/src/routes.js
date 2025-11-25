@@ -86,7 +86,16 @@ router.post('/webhooks/mux', async (req, res) => {
   try {
     const rawBody = req.body.toString('utf8')
     const signature = req.headers['mux-signature']
-    const secret = process.env.MUX_WEBHOOK_SIGNING_SECRET
+
+    // ✅ FIX: Secret key se accidental spaces remove karna (trim)
+    const secret = (process.env.MUX_WEBHOOK_SIGNING_SECRET || '').trim()
+
+    // Debugging Log: Secret ke last 5 digits print karein taake confirm ho
+    if (!secret) {
+      console.error(`[Webhook ${requestId}] ❌ Secret Key is MISSING in .env!`)
+      return res.status(500).send('Server Configuration Error: Missing Webhook Secret')
+    }
+    console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret ending in: ...${secret.slice(-5)}`)
 
     // 1. Signature Verification
     let event
@@ -94,9 +103,12 @@ router.post('/webhooks/mux', async (req, res) => {
       const webhooks = new Webhooks(secret)
       event = webhooks.verifySignature(rawBody, signature)
     } catch (verifyError) {
-      // Development Fallback
+      console.error(`[Webhook ${requestId}] ❌ Signature Verification Failed!`)
+      console.error(`[Webhook ${requestId}] Reason: ${verifyError.message}`)
+
+      // Development Fallback (Optional: Remove in production strict mode)
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[Webhook ${requestId}] ⚠️ Signature failed. Parsing manually (DEV MODE).`)
+        console.warn(`[Webhook ${requestId}] ⚠️ Parsing manually (DEV MODE fallback).`)
         event = JSON.parse(rawBody)
       } else {
         return res.status(400).send(`Webhook Error: ${verifyError.message}`)
