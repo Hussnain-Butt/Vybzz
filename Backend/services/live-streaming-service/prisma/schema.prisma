@@ -16,7 +16,7 @@ model LiveStream {
   description String?
   tags        String[] @default([]) // Stream ke tags store karenge
   thumbnailUrl String? // Thumbnail image ka URL
-
+  processed Boolean @default(false)
   streamKey   String @unique
   playbackId  String @unique
   muxStreamId String @unique

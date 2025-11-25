@@ -26,7 +26,7 @@ function spawnFfmpeg(rtmpUrl, streamKey) {
 
     // --- Video Options ---
     '-c:v',
-    'libx264',
+    'libx24',
     '-preset',
     'veryfast',
     '-tune',
