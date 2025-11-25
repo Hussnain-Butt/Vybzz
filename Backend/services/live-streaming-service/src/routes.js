@@ -1,37 +1,20 @@
 const express = require('express')
 const { Router } = require('express')
-// Explicitly try to get Webhooks from named export AND default export
 const Mux = require('@mux/mux-node')
 const { PrismaClient } = require('@prisma/client')
 const axios = require('axios')
+const crypto = require('crypto') // ✅ Import Native Crypto Module
 
 const router = Router()
 const prisma = new PrismaClient()
 
 // ========================================================
-// 1. MUX INITIALIZATION & WEBHOOK SETUP (ROBUST FIX)
+// 1. MUX INITIALIZATION
 // ========================================================
-
-// Initialize Client (Compatible with v8+)
 const mux = new Mux({
   tokenId: process.env.MUX_TOKEN_ID,
   tokenSecret: process.env.MUX_TOKEN_SECRET,
 })
-
-// Attempt to resolve Webhooks utility safely
-let MuxWebhooks = Mux.Webhooks
-
-// Fallback: If not found on default export, try named export (Common in older/specific builds)
-if (!MuxWebhooks) {
-  try {
-    const pkg = require('@mux/mux-node')
-    if (pkg.Webhooks) {
-      MuxWebhooks = pkg.Webhooks
-    }
-  } catch (e) {
-    console.error('Failed to load Webhooks from package directly')
-  }
-}
 
 // =========================================================
 // === URL CONFIGURATION ===
@@ -51,6 +34,50 @@ const getClerkId = (req) => {
   return clerkId
 }
 
+// ========================================================
+// ✅ MANUAL WEBHOOK VERIFICATION FUNCTION (NO SDK DEPENDENCY)
+// ========================================================
+const verifyMuxWebhookSignature = (rawBody, signature, secret) => {
+  if (!signature) throw new Error('No signature found in headers')
+  if (!secret) throw new Error('No secret found')
+
+  // Parse the signature header (e.g., t=12345,v1=abcdef...)
+  const components = signature.split(',').reduce((acc, item) => {
+    const [key, value] = item.split('=')
+    if (key && value) acc[key] = value
+    return acc
+  }, {})
+
+  const timestamp = components.t
+  const muxSignature = components.v1
+
+  if (!timestamp || !muxSignature) {
+    throw new Error('Invalid signature format')
+  }
+
+  // Prevent Replay Attacks (Optional: check if timestamp is too old)
+  // const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 5 * 60;
+  // if (parseInt(timestamp) < fiveMinutesAgo) throw new Error('Request too old');
+
+  // Create the payload hash: timestamp + . + rawBody
+  const payload = `${timestamp}.${rawBody}`
+  const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('hex')
+
+  // Secure comparison
+  // Note: TimingSafeEqual requires Buffers
+  const expectedBuffer = Buffer.from(expectedSignature)
+  const actualBuffer = Buffer.from(muxSignature)
+
+  if (
+    expectedBuffer.length !== actualBuffer.length ||
+    !crypto.timingSafeEqual(expectedBuffer, actualBuffer)
+  ) {
+    throw new Error('Signature mismatch')
+  }
+
+  return true
+}
+
 /**
  * @route   POST /create
  * @desc    Create a new Mux live stream
@@ -66,7 +93,6 @@ router.post('/create', async (req, res) => {
 
     console.log(`[Stream Create] Request for User: ${clerkId}, Title: ${title}`)
 
-    // Create Stream (Using v8+ syntax)
     const muxStream = await mux.video.liveStreams.create({
       playback_policy: ['public'],
       new_asset_settings: {
@@ -105,7 +131,7 @@ router.post('/webhooks/mux', async (req, res) => {
   const requestId = Math.random().toString(36).substring(7) // Tracking ID
 
   try {
-    // Ensure body is string for signature verification
+    // Force body to string for verification
     const rawBody =
       typeof req.body === 'string' || Buffer.isBuffer(req.body)
         ? req.body.toString('utf8')
@@ -121,35 +147,22 @@ router.post('/webhooks/mux', async (req, res) => {
       return res.status(500).send('Configuration Error')
     }
 
-    console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret ending in: ...${secret.slice(-5)}`)
+    console.log(`[Webhook ${requestId}] 🔐 Verifying Signature...`)
 
     let event
 
     try {
-      // ✅ FINAL FIX: Check for function existence before calling
-      if (!MuxWebhooks) {
-        throw new Error('MuxWebhooks utility could not be loaded.')
-      }
+      // ✅ 1. Verify manually using Crypto (No SDK dependency)
+      verifyMuxWebhookSignature(rawBody, signature, secret)
 
-      // Try verifyHeader (Standard) or verifySignature (Older versions)
-      if (typeof MuxWebhooks.verifyHeader === 'function') {
-        event = MuxWebhooks.verifyHeader(rawBody, signature, secret)
-      } else if (typeof MuxWebhooks.verifySignature === 'function') {
-        event = MuxWebhooks.verifySignature(rawBody, signature, secret)
-      } else {
-        // Debugging log to see what IS available
-        console.error(
-          `[Webhook ${requestId}] Available methods on Webhooks:`,
-          Object.keys(MuxWebhooks),
-        )
-        throw new Error('Neither verifyHeader nor verifySignature found on Mux.Webhooks')
-      }
+      // ✅ 2. Parse JSON after successful verification
+      event = JSON.parse(rawBody)
     } catch (verifyError) {
       console.error(`[Webhook ${requestId}] ❌ Verification Failed: ${verifyError.message}`)
 
       // DEV MODE FALLBACK
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[Webhook ${requestId}] ⚠️ Parsing manually (DEV MODE).`)
+        console.warn(`[Webhook ${requestId}] ⚠️ Accepting anyway (DEV MODE).`)
         try {
           event = JSON.parse(rawBody)
         } catch (e) {
