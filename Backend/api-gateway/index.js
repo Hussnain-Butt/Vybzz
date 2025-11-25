@@ -58,21 +58,25 @@ const defaultProxyOptions = {
 // -------- Public Routes --------
 app.use('/auth', createProxyMiddleware({ ...defaultProxyOptions, target: AUTH_URL }))
 app.use('/webhooks/clerk', createProxyMiddleware({ ...defaultProxyOptions, target: USER_URL }))
+
+// ==================================================================================
+// === FINAL FIX FOR MUX WEBHOOKS (404 ERROR SOLVED)                              ===
+// ==================================================================================
+// Express 'app.use' path ko strip kar deta hai. Jab request '/webhooks/mux' par aati hai,
+// to proxy middleware ko sirf '/' milta hai. Live service '/webhooks/mux' expect kar rahi hai.
+// Isliye hum pathRewrite use karke path ko forcefully wapis '/webhooks/mux' set kar rahe hain.
 app.use(
   '/webhooks/mux',
   createProxyMiddleware({
     ...defaultProxyOptions,
     target: LIVE_STREAM_URL,
-    pathRewrite: { '^/webhooks/mux': '/webhooks/mux' }, // Ensure path is preserved
+    pathRewrite: () => '/webhooks/mux', // Force the path to be exactly this
   }),
 )
 
 // ==================================================================================
-// === FINAL FIX: ADDED `pathRewrite` TO ALL PROTECTED ROUTES                     ===
+// === PROTECTED ROUTES (Path Stripping logic remains for these)                  ===
 // ==================================================================================
-// This is the crucial fix. It removes the base path (e.g., '/posts') before forwarding
-// the request, so the downstream service receives a clean path (e.g., '/' or '/:id').
-// This works for both local and production environments.
 
 app.use(
   '/users',
@@ -108,12 +112,14 @@ app.use(
 )
 
 // 2. WebSocket proxy for the actual live stream - PUBLIC
+// Note: We do NOT use pathRewrite here because WebSocket upgrades handle the URL differently
+// and live-streaming-service expects the full path for validation.
 const wsProxy = createProxyMiddleware({
   ...defaultProxyOptions,
   target: LIVE_STREAM_URL,
   ws: true,
 })
-app.use('/stream/live', wsProxy) // No pathRewrite needed here, live-streaming-service handles the full path
+app.use('/stream/live', wsProxy)
 
 // -------- WebSocket Upgrade Handling --------
 server.on('upgrade', (req, socket, head) => {
