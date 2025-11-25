@@ -1,7 +1,7 @@
 const express = require('express')
 const { Router } = require('express')
+// Explicitly try to get Webhooks from named export AND default export
 const Mux = require('@mux/mux-node')
-const { Webhooks } = require('@mux/mux-node') // ✅ FIX: Correct Import
 const { PrismaClient } = require('@prisma/client')
 const axios = require('axios')
 
@@ -9,15 +9,32 @@ const router = Router()
 const prisma = new PrismaClient()
 
 // ========================================================
-// 1. MUX INITIALIZATION (SDK v8)
+// 1. MUX INITIALIZATION & WEBHOOK SETUP (ROBUST FIX)
 // ========================================================
+
+// Initialize Client (Compatible with v8+)
 const mux = new Mux({
   tokenId: process.env.MUX_TOKEN_ID,
   tokenSecret: process.env.MUX_TOKEN_SECRET,
 })
 
+// Attempt to resolve Webhooks utility safely
+let MuxWebhooks = Mux.Webhooks
+
+// Fallback: If not found on default export, try named export (Common in older/specific builds)
+if (!MuxWebhooks) {
+  try {
+    const pkg = require('@mux/mux-node')
+    if (pkg.Webhooks) {
+      MuxWebhooks = pkg.Webhooks
+    }
+  } catch (e) {
+    console.error('Failed to load Webhooks from package directly')
+  }
+}
+
 // =========================================================
-// === FINAL DOCKER FIX: URL CONFIGURATION ===
+// === URL CONFIGURATION ===
 // =========================================================
 const POST_SERVICE_URL = 'http://post-service:3003'
 
@@ -49,6 +66,7 @@ router.post('/create', async (req, res) => {
 
     console.log(`[Stream Create] Request for User: ${clerkId}, Title: ${title}`)
 
+    // Create Stream (Using v8+ syntax)
     const muxStream = await mux.video.liveStreams.create({
       playback_policy: ['public'],
       new_asset_settings: {
@@ -84,41 +102,61 @@ router.post('/create', async (req, res) => {
  * @desc    Handle webhooks from Mux
  */
 router.post('/webhooks/mux', async (req, res) => {
-  const requestId = Math.random().toString(36).substring(7)
+  const requestId = Math.random().toString(36).substring(7) // Tracking ID
 
   try {
+    // Ensure body is string for signature verification
     const rawBody =
       typeof req.body === 'string' || Buffer.isBuffer(req.body)
         ? req.body.toString('utf8')
         : JSON.stringify(req.body)
 
     const signature = req.headers['mux-signature']
+
+    // Secret Key Trim
     const secret = (process.env.MUX_WEBHOOK_SIGNING_SECRET || '').trim()
 
     if (!secret) {
-      console.error(`[Webhook ${requestId}] ❌ CRITICAL: Secret Key MISSING`)
+      console.error(`[Webhook ${requestId}] ❌ CRITICAL: Secret Key MISSING in .env`)
       return res.status(500).send('Configuration Error')
     }
 
-    console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret: ...${secret.slice(-5)}`)
+    console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret ending in: ...${secret.slice(-5)}`)
 
     let event
 
     try {
-      // ✅ FIX: Correct Verification Method for SDK v8
-      event = Webhooks.verifyHeader(rawBody, signature, secret)
+      // ✅ FINAL FIX: Check for function existence before calling
+      if (!MuxWebhooks) {
+        throw new Error('MuxWebhooks utility could not be loaded.')
+      }
+
+      // Try verifyHeader (Standard) or verifySignature (Older versions)
+      if (typeof MuxWebhooks.verifyHeader === 'function') {
+        event = MuxWebhooks.verifyHeader(rawBody, signature, secret)
+      } else if (typeof MuxWebhooks.verifySignature === 'function') {
+        event = MuxWebhooks.verifySignature(rawBody, signature, secret)
+      } else {
+        // Debugging log to see what IS available
+        console.error(
+          `[Webhook ${requestId}] Available methods on Webhooks:`,
+          Object.keys(MuxWebhooks),
+        )
+        throw new Error('Neither verifyHeader nor verifySignature found on Mux.Webhooks')
+      }
     } catch (verifyError) {
       console.error(`[Webhook ${requestId}] ❌ Verification Failed: ${verifyError.message}`)
 
+      // DEV MODE FALLBACK
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[Webhook ${requestId}] ⚠️ DEV MODE: Parsing Without Verify`)
+        console.warn(`[Webhook ${requestId}] ⚠️ Parsing manually (DEV MODE).`)
         try {
           event = JSON.parse(rawBody)
         } catch (e) {
           return res.status(400).send('Invalid JSON')
         }
       } else {
-        return res.status(401).send(`Webhook Verification Failed`)
+        return res.status(401).send(`Webhook Verification Failed: ${verifyError.message}`)
       }
     }
 
