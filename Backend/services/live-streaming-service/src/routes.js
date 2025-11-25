@@ -3,7 +3,6 @@
 const express = require('express')
 const { Router } = require('express')
 const Mux = require('@mux/mux-node')
-const { Webhooks } = require('@mux/mux-node')
 const { PrismaClient } = require('@prisma/client')
 const axios = require('axios')
 
@@ -85,9 +84,8 @@ router.post('/webhooks/mux', async (req, res) => {
 
   try {
     const rawBody = req.body.toString('utf8')
-    const signature = req.headers['mux-signature']
 
-    // ✅ FIX: Secret key se accidental spaces remove karna (trim)
+    // ✅ FIX 1: Secret key se accidental spaces remove karna (trim)
     const secret = (process.env.MUX_WEBHOOK_SIGNING_SECRET || '').trim()
 
     // Debugging Log: Secret ke last 5 digits print karein taake confirm ho
@@ -97,16 +95,16 @@ router.post('/webhooks/mux', async (req, res) => {
     }
     console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret ending in: ...${secret.slice(-5)}`)
 
-    // 1. Signature Verification
+    // ✅ FIX 2: UPDATED VERIFICATION METHOD FOR MUX SDK v8
+    // Hum purana 'new Webhooks()' use nahi kar rahay, naya static method use kar rahay hain.
     let event
     try {
-      const webhooks = new Webhooks(secret)
-      event = webhooks.verifySignature(rawBody, signature)
+      event = Mux.Webhooks.verifySignature(rawBody, req.headers, secret)
     } catch (verifyError) {
       console.error(`[Webhook ${requestId}] ❌ Signature Verification Failed!`)
       console.error(`[Webhook ${requestId}] Reason: ${verifyError.message}`)
 
-      // Development Fallback (Optional: Remove in production strict mode)
+      // Development Fallback (Sirf tab chalega agar NODE_ENV production nahi hai)
       if (process.env.NODE_ENV !== 'production') {
         console.warn(`[Webhook ${requestId}] ⚠️ Parsing manually (DEV MODE fallback).`)
         event = JSON.parse(rawBody)
@@ -142,7 +140,7 @@ router.post('/webhooks/mux', async (req, res) => {
         break
 
       // --- VOD / POST CREATION LOGIC ---
-      // ✅ FIX: Sirf 'video.asset.ready' event handle karenge to avoid duplicate posts
+      // ✅ FIX 3: Sirf 'video.asset.ready' event handle karenge to avoid duplicate posts
       case 'video.asset.ready':
         // Sirf un assets ko process karein jo live stream se bane hain
         if (eventData.live_stream_id) {
