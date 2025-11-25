@@ -11,6 +11,7 @@
 **/.env
 **/.env.local
 **/.env.production
+.env-production-clean.txt
 
 # But allow .env.template and .env.example files
 !.env.template

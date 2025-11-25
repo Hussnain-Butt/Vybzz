@@ -1,4 +1,4 @@
-// gateway.js
+// File: Backend/api-gateway/index.js (COMPLETE AND FINAL UPDATED VERSION)
 
 require('dotenv').config()
 const express = require('express')
@@ -11,7 +11,7 @@ const { clerkMiddleware, requireAuth } = require('@clerk/express')
 const PORT = Number(process.env.PORT || 3000)
 const DOCKER = String(process.env.DOCKER || '').toLowerCase() === 'true'
 
-// Service URLs
+// Service URLs (dynamic based on DOCKER env variable)
 const AUTH_URL = DOCKER ? 'http://auth-service:3001' : 'http://localhost:3001'
 const USER_URL = DOCKER ? 'http://user-service:3002' : 'http://localhost:3002'
 const POST_URL = DOCKER ? 'http://post-service:3003' : 'http://localhost:3003'
@@ -22,8 +22,8 @@ const protect = [
   clerkMiddleware(),
   requireAuth(),
   (req, res, next) => {
-    // ✅ FIX: Changed req.auth to req.auth() to resolve deprecation warning.
-    const userId = req.auth()?.userId
+    // Pass Clerk user ID to downstream services
+    const userId = req.auth?.userId
     if (userId) {
       req.headers['x-user-id'] = userId
       return next()
@@ -46,6 +46,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 // -------- Proxy Creation --------
 const defaultProxyOptions = {
   changeOrigin: true,
+  logLevel: 'debug', // Enable detailed logs to see what's happening
   onError: (err, req, res) => {
     console.error('[GW Proxy Error]', err)
     if (res && !res.headersSent) {
@@ -57,41 +58,64 @@ const defaultProxyOptions = {
 // -------- Public Routes --------
 app.use('/auth', createProxyMiddleware({ ...defaultProxyOptions, target: AUTH_URL }))
 app.use('/webhooks/clerk', createProxyMiddleware({ ...defaultProxyOptions, target: USER_URL }))
-// ✅ FIX: Express strips '/webhooks/mux', so we rewrite '/' back to '/webhooks/mux'
-app.use('/webhooks/mux', createProxyMiddleware({ 
-  ...defaultProxyOptions, 
-  target: LIVE_STREAM_URL,
-  pathRewrite: { '^/': '/webhooks/mux' }, // Rewrite / to /webhooks/mux
-  logLevel: 'debug'
-}))
+app.use(
+  '/webhooks/mux',
+  createProxyMiddleware({
+    ...defaultProxyOptions,
+    target: LIVE_STREAM_URL,
+    pathRewrite: { '^/webhooks/mux': '/webhooks/mux' }, // Ensure path is preserved
+  }),
+)
 
-// -------- Protected Routes --------
-app.use('/users', protect, createProxyMiddleware({ ...defaultProxyOptions, target: USER_URL }))
-app.use('/posts', protect, createProxyMiddleware({ ...defaultProxyOptions, target: POST_URL }))
+// ==================================================================================
+// === FINAL FIX: ADDED `pathRewrite` TO ALL PROTECTED ROUTES                     ===
+// ==================================================================================
+// This is the crucial fix. It removes the base path (e.g., '/posts') before forwarding
+// the request, so the downstream service receives a clean path (e.g., '/' or '/:id').
+// This works for both local and production environments.
+
+app.use(
+  '/users',
+  protect,
+  createProxyMiddleware({
+    ...defaultProxyOptions,
+    target: USER_URL,
+    pathRewrite: { '^/users': '' }, // Rewrite /users/me to /me
+  }),
+)
+
+app.use(
+  '/posts',
+  protect,
+  createProxyMiddleware({
+    ...defaultProxyOptions,
+    target: POST_URL,
+    pathRewrite: { '^/posts': '' }, // Rewrite /posts to / and /posts/123 to /123
+  }),
+)
 
 // -------- Streaming Routes (Special Handling) --------
-// 1. HTTP routes for streaming (e.g., creating a stream) - PROTECTED
+// 1. HTTP routes for streaming (e.g., /stream/create) - PROTECTED
 app.use(
   '/stream',
   protect,
-  createProxyMiddleware({ ...defaultProxyOptions, target: LIVE_STREAM_URL, ws: false }),
+  createProxyMiddleware({
+    ...defaultProxyOptions,
+    target: LIVE_STREAM_URL,
+    ws: false,
+    pathRewrite: { '^/stream': '' }, // Rewrite /stream/create to /create
+  }),
 )
 
 // 2. WebSocket proxy for the actual live stream - PUBLIC
-// *** THIS IS THE FIX ***
-// We create the proxy with the target configuration first...
 const wsProxy = createProxyMiddleware({
   ...defaultProxyOptions,
   target: LIVE_STREAM_URL,
   ws: true,
-  logLevel: 'debug',
 })
-// ...and then apply it to the specific path.
-app.use('/stream/live', wsProxy)
+app.use('/stream/live', wsProxy) // No pathRewrite needed here, live-streaming-service handles the full path
 
 // -------- WebSocket Upgrade Handling --------
-// Attach the wsProxy's upgrade handler to the server.
-// This allows http-proxy-middleware to handle the WebSocket handshake.
 server.on('upgrade', (req, socket, head) => {
   const pathname = req.url || ''
   if (pathname.startsWith('/stream/live/')) {
