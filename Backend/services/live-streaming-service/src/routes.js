@@ -1,6 +1,7 @@
 const express = require('express')
 const { Router } = require('express')
 const Mux = require('@mux/mux-node')
+const { Webhooks } = require('@mux/mux-node') // ✅ FIX: Correct Import
 const { PrismaClient } = require('@prisma/client')
 const axios = require('axios')
 
@@ -8,7 +9,7 @@ const router = Router()
 const prisma = new PrismaClient()
 
 // ========================================================
-// 1. MUX INITIALIZATION (FIXED FOR SDK v8)
+// 1. MUX INITIALIZATION (SDK v8)
 // ========================================================
 const mux = new Mux({
   tokenId: process.env.MUX_TOKEN_ID,
@@ -48,7 +49,6 @@ router.post('/create', async (req, res) => {
 
     console.log(`[Stream Create] Request for User: ${clerkId}, Title: ${title}`)
 
-    // ✅ FIX: Using correct property casing for Mux SDK v8
     const muxStream = await mux.video.liveStreams.create({
       playback_policy: ['public'],
       new_asset_settings: {
@@ -84,49 +84,41 @@ router.post('/create', async (req, res) => {
  * @desc    Handle webhooks from Mux
  */
 router.post('/webhooks/mux', async (req, res) => {
-  const requestId = Math.random().toString(36).substring(7) // Tracking ID
+  const requestId = Math.random().toString(36).substring(7)
 
   try {
-    // Note: Make sure your express app is configured to pass raw body for this route
-    // if using bodyParser.json(), this might need adjustment in server.js,
-    // but assuming req.body is a buffer/string here based on your previous code:
     const rawBody =
       typeof req.body === 'string' || Buffer.isBuffer(req.body)
         ? req.body.toString('utf8')
-        : JSON.stringify(req.body) // Fallback if body is already parsed
+        : JSON.stringify(req.body)
 
     const signature = req.headers['mux-signature']
-
-    // ✅ FIX: Secret Key Trim
     const secret = (process.env.MUX_WEBHOOK_SIGNING_SECRET || '').trim()
 
     if (!secret) {
-      console.error(`[Webhook ${requestId}] ❌ CRITICAL: Secret Key MISSING in .env`)
+      console.error(`[Webhook ${requestId}] ❌ CRITICAL: Secret Key MISSING`)
       return res.status(500).send('Configuration Error')
     }
 
-    console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret ending in: ...${secret.slice(-5)}`)
+    console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret: ...${secret.slice(-5)}`)
 
     let event
 
     try {
-      // ✅ FIX: Correct Method for Mux SDK v8+
-      // Instead of checking for verifySignature or requiring separately,
-      // we use the static method on the main Mux class.
-      event = Mux.Webhooks.verifyHeader(rawBody, signature, secret)
+      // ✅ FIX: Correct Verification Method for SDK v8
+      event = Webhooks.verifyHeader(rawBody, signature, secret)
     } catch (verifyError) {
       console.error(`[Webhook ${requestId}] ❌ Verification Failed: ${verifyError.message}`)
 
-      // DEV MODE FALLBACK (Optional, can be removed in strict production)
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[Webhook ${requestId}] ⚠️ Parsing manually (DEV MODE).`)
+        console.warn(`[Webhook ${requestId}] ⚠️ DEV MODE: Parsing Without Verify`)
         try {
           event = JSON.parse(rawBody)
         } catch (e) {
           return res.status(400).send('Invalid JSON')
         }
       } else {
-        return res.status(401).send(`Webhook Verification Failed: ${verifyError.message}`)
+        return res.status(401).send(`Webhook Verification Failed`)
       }
     }
 
@@ -214,7 +206,6 @@ router.post('/webhooks/mux', async (req, res) => {
     res.sendStatus(200)
   } catch (err) {
     console.error(`[Webhook ${requestId}] ❌ FATAL ERROR:`, err.message)
-    // Avoid sending 500 to Mux repeatedly if it's a code error, but here it's safe
     res.status(500).send(`Error: ${err.message}`)
   }
 })
