@@ -3,21 +3,20 @@
 const express = require('express')
 const { Router } = require('express')
 const Mux = require('@mux/mux-node')
-// ✅ FIX: v7 Style Import (Destructuring to ensure we get the class)
-const { Webhooks } = Mux
 const { PrismaClient } = require('@prisma/client')
 const axios = require('axios')
 
 const router = Router()
 const prisma = new PrismaClient()
 
-// Mux Initialization
-// Check if keys exist before initializing
-if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
-  console.error('❌ CRITICAL: MUX_TOKEN_ID or MUX_TOKEN_SECRET is missing in .env')
-}
-
-const mux = new Mux(process.env.MUX_TOKEN_ID, process.env.MUX_TOKEN_SECRET)
+// ========================================================
+// 1. MUX INITIALIZATION (FIXED FOR NEW SDK)
+// ========================================================
+// New SDK uses lowerCamelCase properties (e.g., mux.video)
+const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET,
+})
 
 // =========================================================
 // === FINAL DOCKER FIX: URL CONFIGURATION ===
@@ -50,12 +49,13 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ error: 'Stream title is required.' })
     }
 
-    console.log(`[Stream Create] Creating stream for User: ${clerkId} with Title: ${title}`)
+    console.log(`[Stream Create] Request for User: ${clerkId}, Title: ${title}`)
 
-    const muxStream = await mux.Video.LiveStreams.create({
-      playback_policy: 'public',
+    // ✅ FIX 1: Using correct property casing for Mux SDK v8
+    const muxStream = await mux.video.liveStreams.create({
+      playback_policy: ['public'],
       new_asset_settings: {
-        playback_policy: 'public',
+        playback_policy: ['public'],
       },
     })
 
@@ -74,7 +74,6 @@ router.post('/create', async (req, res) => {
       },
     })
 
-    console.log(`[Stream Create] Database Entry Created. ID: ${newStream.id}`)
     res.status(201).json(newStream)
   } catch (error) {
     console.error('[Stream Create] ❌ Error:', error.message)
@@ -85,62 +84,44 @@ router.post('/create', async (req, res) => {
 
 /**
  * @route   POST /webhooks/mux
- * @desc    Handle webhooks
+ * @desc    Handle webhooks from Mux
  */
 router.post('/webhooks/mux', async (req, res) => {
   const requestId = Math.random().toString(36).substring(7) // Tracking ID
 
   try {
-    // 1. Basic Info Logging
+    const rawBody = req.body.toString('utf8')
     const signature = req.headers['mux-signature']
-    console.log(
-      `[Webhook ${requestId}] 📥 Received Webhook. Signature Header: ${
-        signature ? 'Present' : 'MISSING'
-      }`,
-    )
 
-    if (!signature) {
-      console.error(`[Webhook ${requestId}] ❌ Missing mux-signature header.`)
-      return res.status(401).send('Missing Signature')
-    }
-
-    // 2. Secret Extraction & Validation
+    // ✅ FIX 2: Secret Key Trim
     const secret = (process.env.MUX_WEBHOOK_SIGNING_SECRET || '').trim()
+
     if (!secret) {
-      console.error(
-        `[Webhook ${requestId}] ❌ CRITICAL: MUX_WEBHOOK_SIGNING_SECRET is MISSING in .env!`,
-      )
-      return res.status(500).send('Server Configuration Error')
+      console.error(`[Webhook ${requestId}] ❌ CRITICAL: Secret Key MISSING in .env`)
+      return res.status(500).send('Configuration Error')
     }
+
     console.log(`[Webhook ${requestId}] 🔐 Verifying with Secret ending in: ...${secret.slice(-5)}`)
 
-    // 3. Raw Body Logging (Size check)
-    const rawBody = req.body.toString('utf8')
-    console.log(`[Webhook ${requestId}] 📦 Payload Size: ${rawBody.length} bytes`)
-
-    // 4. Signature Verification
+    // ✅ FIX 3: Using Static Verification Method (Works in most versions)
     let event
     try {
-      // Using v7 style instantiation
-      const webhook = new Webhooks(secret)
-      event = webhook.verifySignature(rawBody, signature)
-      console.log(`[Webhook ${requestId}] ✅ Signature Verified Successfully!`)
+      // Try v8 style first (Static)
+      if (Mux.Webhooks && typeof Mux.Webhooks.verifySignature === 'function') {
+        event = Mux.Webhooks.verifySignature(rawBody, req.headers, secret)
+      }
+      // Fallback to v7 style if static method not found (though 'require' usually gives class)
+      else {
+        const { Webhooks } = require('@mux/mux-node')
+        event = Webhooks.verifyHeader(rawBody, signature, secret)
+      }
     } catch (verifyError) {
-      console.error(`[Webhook ${requestId}] ❌ Signature Verification Failed!`)
-      console.error(`[Webhook ${requestId}] Error Name: ${verifyError.name}`)
-      console.error(`[Webhook ${requestId}] Error Message: ${verifyError.message}`)
+      console.error(`[Webhook ${requestId}] ❌ Verification Failed: ${verifyError.message}`)
 
-      // IMPORTANT: Development Fallback
+      // DEV MODE FALLBACK
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(
-          `[Webhook ${requestId}] ⚠️ DEV MODE: Parsing manually despite signature failure.`,
-        )
-        try {
-          event = JSON.parse(rawBody)
-        } catch (jsonError) {
-          console.error(`[Webhook ${requestId}] ❌ JSON Parse failed:`, jsonError.message)
-          return res.status(400).send('Invalid JSON')
-        }
+        console.warn(`[Webhook ${requestId}] ⚠️ Parsing manually (DEV MODE).`)
+        event = JSON.parse(rawBody)
       } else {
         return res.status(400).send(`Webhook Error: ${verifyError.message}`)
       }
@@ -149,69 +130,55 @@ router.post('/webhooks/mux', async (req, res) => {
     const { type, data: eventData } = event
 
     if (type.includes('live_stream') || type.includes('asset')) {
-      console.log(
-        `[Webhook ${requestId}] 📨 Processing Event: ${type} | Resource ID: ${eventData.id}`,
-      )
-    } else {
-      console.log(`[Webhook ${requestId}] ℹ️ Ignoring Event: ${type}`)
+      console.log(`[Webhook ${requestId}] 📨 Event: ${type} | ID: ${eventData.id}`)
     }
 
     switch (type) {
-      // --- STREAM STATUS ---
       case 'video.live_stream.active':
-        console.log(`[Webhook ${requestId}] 🔴 Update DB: Stream ${eventData.id} is LIVE`)
         await prisma.liveStream.updateMany({
           where: { muxStreamId: eventData.id },
           data: { isLive: true },
         })
+        console.log(`[Webhook ${requestId}] 🔴 Stream LIVE`)
         break
 
       case 'video.live_stream.idle':
       case 'video.live_stream.disconnected':
-        console.log(`[Webhook ${requestId}] ⚫ Update DB: Stream ${eventData.id} is OFFLINE`)
         await prisma.liveStream.updateMany({
           where: { muxStreamId: eventData.id },
           data: { isLive: false },
         })
+        console.log(`[Webhook ${requestId}] ⚫ Stream OFFLINE`)
         break
 
-      // --- VOD CREATION ---
       case 'video.asset.ready':
-        // Check if this asset belongs to a live stream
         if (eventData.live_stream_id) {
-          console.log(
-            `[Webhook ${requestId}] 🎬 VOD Triggered for Live Stream ID: ${eventData.live_stream_id}`,
-          )
+          console.log(`[Webhook ${requestId}] 🎬 VOD Event. Stream ID: ${eventData.live_stream_id}`)
 
-          // Find original stream
           const originalStream = await prisma.liveStream.findFirst({
             where: { muxStreamId: eventData.live_stream_id },
           })
 
           if (!originalStream) {
-            console.warn(
-              `[Webhook ${requestId}] ⚠️ Stream not found in DB for ID: ${eventData.live_stream_id}`,
-            )
+            console.warn(`[Webhook ${requestId}] ⚠️ Stream not found in DB`)
             break
           }
 
           if (originalStream.processed) {
-            console.log(
-              `[Webhook ${requestId}] ⚠️ Stream ID ${originalStream.id} already processed. Skipping.`,
-            )
+            console.log(`[Webhook ${requestId}] ⚠️ Already processed`)
             break
           }
 
           const muxPlaybackId = eventData.playback_ids?.[0]?.id
           if (!muxPlaybackId) {
-            console.error(`[Webhook ${requestId}] ❌ No playback IDs found in Mux Asset payload!`)
+            console.error(`[Webhook ${requestId}] ❌ No Playback ID`)
             break
           }
 
           const postPayload = {
             creatorId: originalStream.userId,
             title: originalStream.title,
-            description: originalStream.description || 'Watch the replay of my live stream!',
+            description: originalStream.description || 'Live Stream Replay',
             tags: originalStream.tags || [],
             thumbnailUrl: originalStream.thumbnailUrl,
             muxPlaybackId: muxPlaybackId,
@@ -219,43 +186,21 @@ router.post('/webhooks/mux', async (req, res) => {
           }
 
           const targetUrl = `${POST_SERVICE_URL}/internal/create-post-from-stream`
-          console.log(`[Webhook ${requestId}] 📤 Sending Request to: ${targetUrl}`)
 
           try {
             const response = await axios.post(targetUrl, postPayload, {
-              timeout: 15000, // Increased timeout to 15s
+              timeout: 15000,
               headers: { 'Content-Type': 'application/json' },
             })
+            console.log(`[Webhook ${requestId}] 🎉 VOD Post Created! Status: ${response.status}`)
 
-            console.log(
-              `[Webhook ${requestId}] 🎉 SUCCESS! VOD Post Created. Service Response: ${response.status}`,
-            )
-
-            // Mark as processed
             await prisma.liveStream.update({
               where: { id: originalStream.id },
               data: { processed: true },
             })
-            console.log(
-              `[Webhook ${requestId}] ✅ Marked stream ${originalStream.id} as processed in DB.`,
-            )
           } catch (apiError) {
-            console.error(`[Webhook ${requestId}] ❌ FAILED to call Post Service.`)
-            if (apiError.response) {
-              // Server responded with a status code outside 2xx
-              console.error(`[Webhook ${requestId}] Status: ${apiError.response.status}`)
-              console.error(`[Webhook ${requestId}] Data:`, JSON.stringify(apiError.response.data))
-            } else if (apiError.request) {
-              // Request was made but no response received
-              console.error(`[Webhook ${requestId}] No Response received! Is Post Service running?`)
-            } else {
-              console.error(`[Webhook ${requestId}] Error Message:`, apiError.message)
-            }
+            console.error(`[Webhook ${requestId}] ❌ Post Creation Failed:`, apiError.message)
           }
-        } else {
-          console.log(
-            `[Webhook ${requestId}] ℹ️ 'video.asset.ready' received but no 'live_stream_id' present (Direct Upload?). Ignoring here.`,
-          )
         }
         break
 
@@ -263,15 +208,10 @@ router.post('/webhooks/mux', async (req, res) => {
         break
     }
 
-    // Always return 200 to Mux so they don't keep retrying
-    res.status(200).send('Webhook received')
+    res.sendStatus(200)
   } catch (err) {
-    console.error(`[Webhook ${requestId}] ❌ FATAL INTERNAL ERROR:`, err.message)
-    console.error(`[Webhook ${requestId}] Stack:`, err.stack)
-    // Return 500 so Mux knows something went wrong on our end (unless verification failed earlier)
-    if (!res.headersSent) {
-      res.status(500).send(`Internal Server Error: ${err.message}`)
-    }
+    console.error(`[Webhook ${requestId}] ❌ FATAL ERROR:`, err.message)
+    res.status(500).send(`Error: ${err.message}`)
   }
 })
 
